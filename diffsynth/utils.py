@@ -81,7 +81,6 @@ def register_vae_hooks(pipe):
 
 
 def setup_pipe_modules(pipe, enable_vram_management=False, num_persistent_param_in_dit=None):
-    # Move major submodules to the target device if they exist
     for module_name in ["dit", "vae", "image_encoder", "text_encoder"]:
         if hasattr(pipe, module_name):
             getattr(pipe, module_name).to(pipe.device)
