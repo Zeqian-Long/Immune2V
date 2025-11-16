@@ -548,7 +548,7 @@ def prompt_clip_attn_loss(
         attn_map = F.softmax(attn_map, dim=1) 
         cross_attn_loss = 0
         if block_id == 0:
-            for anchor_idx in range(0, 257):  
+            for anchor_idx in range(0, 1):  
                 a1 = attn_map[0, :, anchor_idx]   # [6240]
                 # a1 = attn_map[0, :, 0]   # [6240]
                 for idx in range(257, 769):
