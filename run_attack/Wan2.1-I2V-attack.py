@@ -24,6 +24,10 @@ import torch.nn.functional as F
 import random
 import yaml
 
+
+
+# NOTE: Modify your model paths here
+
 def load_all_models():
     model_manager = ModelManager(device="cpu")
     model_manager.load_models(
