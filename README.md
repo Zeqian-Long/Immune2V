@@ -11,11 +11,9 @@
 # 🛠️ Code Setup
 We adopt our source code from DiffSynth-Studio. You can refer to their [official repo](https://github.com/modelscope/DiffSynth-Studio), or running the following command to construct the environment.
 ```
-pip install diffsynth
-pip uninstall diffsynth
-pip install matplotlib scikit-learn open_clip_torch lpips
+pip install -r requirements.txt
 ```
-We will try to fix the environment issue later, but the above commands will install all the packages you need to run the code.
+
 
 We recommend you to run the experiment on a single A100 GPU (80G).
 

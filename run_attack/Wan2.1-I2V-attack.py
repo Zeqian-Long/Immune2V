@@ -1,11 +1,11 @@
 import torch
 import sys
-diffsynth_path = "/workspace/DiffSynth-Studio"
+diffsynth_path = "/workspace/Wan-I2V-Attack"
 sys.path.append(diffsynth_path)
 from diffsynth.models.model_manager import ModelManager
 from diffsynth.pipelines.wan_video import WanVideoPipeline, prompt_clip_attn_loss, model_fn_wan_video
 from diffsynth.data.video import save_video, VideoData, LowMemoryImageFolder
-from diffsynth.utils import crop_and_resize, register_vae_hooks, setup_pipe_modules, init_adv_image, plot_loss_curve, save_adv_result
+from diffsynth.utils import crop_and_resize, register_vae_hooks, setup_pipe_modules, plot_loss_curve, save_adv_result
 
 from PIL import Image
 
@@ -14,39 +14,38 @@ from torchvision.transforms.functional import to_pil_image
 from tqdm import tqdm
 from sklearn.decomposition import PCA
 
-import torchvision.transforms as T
-import matplotlib.pyplot as plt
 import os
 import copy
-import numpy as np
-import torchvision.transforms.functional as TF
-import torch.nn.functional as F
 import random
+
+import numpy as np
 import yaml
+import matplotlib.pyplot as plt
 
+import torch.nn.functional as F
+import torchvision.transforms as T
+import torchvision.transforms.functional as TF
 
-
-# NOTE: Modify your model paths here
 
 def load_all_models():
     model_manager = ModelManager(device="cpu")
     model_manager.load_models(
-        ["/workspace/DiffSynth-Studio/models/Wan-AI/Wan2.1-I2V-14B-480P/models_clip_open-clip-xlm-roberta-large-vit-huge-14.pth"],
+        ["models/Wan-AI/Wan2.1-I2V-14B-480P/models_clip_open-clip-xlm-roberta-large-vit-huge-14.pth"],
         torch_dtype=torch.float16, 
     )
     model_manager.load_models(
         [
             [
-                "/workspace/DiffSynth-Studio/models/Wan-AI/Wan2.1-I2V-14B-480P/diffusion_pytorch_model-00001-of-00007.safetensors",
-                "/workspace/DiffSynth-Studio/models/Wan-AI/Wan2.1-I2V-14B-480P/diffusion_pytorch_model-00002-of-00007.safetensors",
-                "/workspace/DiffSynth-Studio/models/Wan-AI/Wan2.1-I2V-14B-480P/diffusion_pytorch_model-00003-of-00007.safetensors",
-                "/workspace/DiffSynth-Studio/models/Wan-AI/Wan2.1-I2V-14B-480P/diffusion_pytorch_model-00004-of-00007.safetensors",
-                "/workspace/DiffSynth-Studio/models/Wan-AI/Wan2.1-I2V-14B-480P/diffusion_pytorch_model-00005-of-00007.safetensors",
-                "/workspace/DiffSynth-Studio/models/Wan-AI/Wan2.1-I2V-14B-480P/diffusion_pytorch_model-00006-of-00007.safetensors",
-                "/workspace/DiffSynth-Studio/models/Wan-AI/Wan2.1-I2V-14B-480P/diffusion_pytorch_model-00007-of-00007.safetensors",
+                "models/Wan-AI/Wan2.1-I2V-14B-480P/diffusion_pytorch_model-00001-of-00007.safetensors",
+                "models/Wan-AI/Wan2.1-I2V-14B-480P/diffusion_pytorch_model-00002-of-00007.safetensors",
+                "models/Wan-AI/Wan2.1-I2V-14B-480P/diffusion_pytorch_model-00003-of-00007.safetensors",
+                "models/Wan-AI/Wan2.1-I2V-14B-480P/diffusion_pytorch_model-00004-of-00007.safetensors",
+                "models/Wan-AI/Wan2.1-I2V-14B-480P/diffusion_pytorch_model-00005-of-00007.safetensors",
+                "models/Wan-AI/Wan2.1-I2V-14B-480P/diffusion_pytorch_model-00006-of-00007.safetensors",
+                "models/Wan-AI/Wan2.1-I2V-14B-480P/diffusion_pytorch_model-00007-of-00007.safetensors",
             ],
-            "/workspace/DiffSynth-Studio/models/Wan-AI/Wan2.1-I2V-14B-480P/models_t5_umt5-xxl-enc-bf16.pth",
-            "/workspace/DiffSynth-Studio/models/Wan-AI/Wan2.1-I2V-14B-480P/Wan2.1_VAE.pth",
+            "models/Wan-AI/Wan2.1-I2V-14B-480P/models_t5_umt5-xxl-enc-bf16.pth",
+            "models/Wan-AI/Wan2.1-I2V-14B-480P/Wan2.1_VAE.pth",
         ],
         torch_dtype=torch.bfloat16,
     )
@@ -108,6 +107,17 @@ def obtain_latent_sequence(pipe, h, w, num_frames, prompt_emb, image_emb_src):
     return latents_list
 
 
+def init_adv_image(I, epsilon=0.03, value_range=(-1.0, 1.0)):
+    if not isinstance(I, torch.Tensor):
+        raise TypeError("I must be a torch.Tensor")
+    I_adv = I.clone()
+    noise = torch.empty_like(I_adv).uniform_(-epsilon, epsilon)
+    I_adv = I_adv + noise
+    I_adv = torch.clamp(I_adv, value_range[0], value_range[1]).detach()
+    I_adv.requires_grad_(True)
+    return I_adv
+
+
 
 def run_attack(pipe, image, h, w, num_frames, prompt_emb, image_emb_src, image_emb_tgt, num_steps=400, epsilon=20.0 / 255 * 2, step_size=2.0 / 255 * 2):
     latents_list = obtain_latent_sequence(pipe, h, w, num_frames, prompt_emb, image_emb_src)
@@ -166,12 +176,13 @@ def run_attack(pipe, image, h, w, num_frames, prompt_emb, image_emb_src, image_e
 def main():
     pipe = load_all_models()
 
-    with open("/workspace/DiffSynth-Studio/cofig.yaml", "r", encoding="utf-8") as f:
+    with open("cofig.yaml", "r", encoding="utf-8") as f:
         cfg = yaml.safe_load(f)
 
     h = cfg["video"]["height"]
     w = cfg["video"]["width"]
     num_frames = cfg["video"]["num_frames"]
+
     image = Image.open(cfg["data"]["image_path"]).resize((w, h))
     target_image = Image.open(cfg["data"]["target_image_path"]).resize((w, h))
     prompt = cfg["prompt"]["text"]
