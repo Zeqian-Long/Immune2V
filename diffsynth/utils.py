@@ -1,9 +1,26 @@
 from PIL import Image
-import torch
 from torchvision.transforms.functional import to_pil_image
+
+import torch
 import matplotlib.pyplot as plt
 
-def crop_and_resize(image, mask, output_size=(224, 224), offset_ratio=0.15):
+
+def setup_pipe_modules(pipe, enable_vram_management=False, num_persistent_param_in_dit=None):
+    for module_name in ["dit", "vae", "image_encoder", "text_encoder"]:
+        if hasattr(pipe, module_name):
+            getattr(pipe, module_name).to(pipe.device)
+
+    # Optional VRAM management
+    if enable_vram_management:
+        if num_persistent_param_in_dit:
+            pipe.enable_vram_management(num_persistent_param_in_dit=num_persistent_param_in_dit)
+        else:
+            pipe.enable_vram_management()
+
+    return pipe
+
+
+def crop_and_resize(image, mask, output_size=(224, 4), offset_ratio=0.15):
     """
     Crop and resize an image and its corresponding mask to a square region.
 
@@ -39,24 +56,11 @@ def crop_and_resize(image, mask, output_size=(224, 224), offset_ratio=0.15):
 
 
 def make_hook(saved_features, name):
-    """
-    Create a forward hook that stores the output of a layer in a shared dict.
-    """
     def hook(module, inp, out):
         saved_features[name] = out
     return hook
 
-
 def register_vae_hooks(pipe):
-    """
-    Register forward hooks for VAE encoder and decoder layers in a diffusion pipeline.
-
-    Args:
-        pipe: A diffusion pipeline object that contains `pipe.vae.model`.
-
-    Returns:
-        dict: A dictionary that stores the captured feature maps during forward passes.
-    """
     saved_features = {}
 
     vae = pipe.vae.model
@@ -77,33 +81,6 @@ def register_vae_hooks(pipe):
         up.register_forward_hook(make_hook(saved_features, f"upsample_{i}"))
 
     return saved_features
-
-
-
-def setup_pipe_modules(pipe, enable_vram_management=False, num_persistent_param_in_dit=None):
-    for module_name in ["dit", "vae", "image_encoder", "text_encoder"]:
-        if hasattr(pipe, module_name):
-            getattr(pipe, module_name).to(pipe.device)
-
-    # Optional VRAM management
-    if enable_vram_management:
-        if num_persistent_param_in_dit:
-            pipe.enable_vram_management(num_persistent_param_in_dit=num_persistent_param_in_dit)
-        else:
-            pipe.enable_vram_management()
-
-    return pipe
-
-
-def init_adv_image(I, epsilon=0.03, value_range=(-1.0, 1.0)):
-    if not isinstance(I, torch.Tensor):
-        raise TypeError("I must be a torch.Tensor")
-    I_adv = I.clone()
-    noise = torch.empty_like(I_adv).uniform_(-epsilon, epsilon)
-    I_adv = I_adv + noise
-    I_adv = torch.clamp(I_adv, value_range[0], value_range[1]).detach()
-    I_adv.requires_grad_(True)
-    return I_adv
 
 
 

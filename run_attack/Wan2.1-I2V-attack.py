@@ -4,27 +4,14 @@ diffsynth_path = "/workspace/Wan-I2V-Attack"
 sys.path.append(diffsynth_path)
 from diffsynth.models.model_manager import ModelManager
 from diffsynth.pipelines.wan_video import WanVideoPipeline, prompt_clip_attn_loss, model_fn_wan_video
-from diffsynth.data.video import save_video, VideoData, LowMemoryImageFolder
 from diffsynth.utils import crop_and_resize, register_vae_hooks, setup_pipe_modules, plot_loss_curve, save_adv_result
 
 from PIL import Image
-
-from torchvision.transforms.functional import to_tensor
-from torchvision.transforms.functional import to_pil_image
 from tqdm import tqdm
-from sklearn.decomposition import PCA
 
-import os
 import copy
 import random
-
-import numpy as np
 import yaml
-import matplotlib.pyplot as plt
-
-import torch.nn.functional as F
-import torchvision.transforms as T
-import torchvision.transforms.functional as TF
 
 
 def load_all_models():
@@ -55,12 +42,12 @@ def load_all_models():
 
 
 def prepare_data(pipe, image, target_image, prompt, h=480, w=832, num_frames=1):
-
     # Encode Prompt
     pipe.load_models_to_device(["text_encoder"])
     with torch.no_grad():
         prompt_emb_posi = pipe.encode_prompt(prompt=prompt, positive=True)      # [1, 512, 4096]
 
+    # Modify if needed
     tiler_kwargs = {"tiled": False, "tile_size": (h / 16, w / 16), "tile_stride": (h / 32, w / 32)}
 
     pipe.load_models_to_device(["image_encoder", "vae"])
@@ -69,16 +56,19 @@ def prepare_data(pipe, image, target_image, prompt, h=480, w=832, num_frames=1):
             image, num_frames=num_frames, height=h, width=w, **tiler_kwargs
         )   # clip: [1, 1 + 256, 1280], y: [1, C (4+16), 1+T/4, 60, 104]
 
+    # Register Hooks at Multiple Resolutions
     saved_features = register_vae_hooks(pipe)
 
     with torch.no_grad():
         image_emb_tgt = pipe.encode_image(
             target_image, num_frames=num_frames, height=h, width=w, **tiler_kwargs
         )
+
     target_features = copy.deepcopy(saved_features)
     saved_features = {}
 
     return prompt_emb_posi, image_emb_src, image_emb_tgt, saved_features, target_features
+
 
 
 def obtain_latent_sequence(pipe, h, w, num_frames, prompt_emb, image_emb_src):
@@ -104,15 +94,19 @@ def obtain_latent_sequence(pipe, h, w, num_frames, prompt_emb, image_emb_src):
                 **prompt_emb, **image_emb_src, **extra_input
             )
             latents = pipe.scheduler.step(noise_pred, pipe.scheduler.timesteps[progress_id], latents)
+
+    # Save
+    # torch.save(latents_list, 'latents_list.pt')
+
     return latents_list
+
 
 
 def init_adv_image(I, epsilon=0.03, value_range=(-1.0, 1.0)):
     if not isinstance(I, torch.Tensor):
         raise TypeError("I must be a torch.Tensor")
     I_adv = I.clone()
-    noise = torch.empty_like(I_adv).uniform_(-epsilon, epsilon)
-    I_adv = I_adv + noise
+    I_adv = I_adv + torch.empty_like(I_adv).uniform_(-epsilon, epsilon)
     I_adv = torch.clamp(I_adv, value_range[0], value_range[1]).detach()
     I_adv.requires_grad_(True)
     return I_adv
@@ -140,8 +134,10 @@ def run_attack(pipe, image, h, w, num_frames, prompt_emb, image_emb_src, image_e
 
         L_enc_1 = torch.nn.functional.mse_loss(image_emb_adv["y"][:, 4:, :], image_emb_tgt["y"][:, 4:, :])
 
+
         pipe.scheduler.set_timesteps(num_inference_steps=50, denoising_strength=1.0, shift=5.0)
         idx = random.randrange(len(pipe.scheduler.timesteps))
+
 
         adv_latents = latents_list[idx].to(dtype=pipe.torch_dtype, device=pipe.device)
         timestep = pipe.scheduler.timesteps[idx].unsqueeze(0).to(dtype=pipe.torch_dtype, device=pipe.device)
@@ -176,7 +172,7 @@ def run_attack(pipe, image, h, w, num_frames, prompt_emb, image_emb_src, image_e
 def main():
     pipe = load_all_models()
 
-    with open("cofig.yaml", "r", encoding="utf-8") as f:
+    with open("config.yaml", "r", encoding="utf-8") as f:
         cfg = yaml.safe_load(f)
 
     h = cfg["video"]["height"]

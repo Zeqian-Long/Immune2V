@@ -167,12 +167,21 @@ class WanVideoPipeline(BasePipeline):
         return {"context": prompt_emb}
     
     
-    def encode_image(self, image, num_frames, height, width, tiled=False, tile_size=(34, 34), tile_stride=(18, 16)):
+    def encode_image(self, image, num_frames, height, width, tiled=False, tile_size=(34, 34), tile_stride=(18, 16), target_image=None):
         if isinstance(image, torch.Tensor):
             image = image.to(self.device)
         else:
             image = self.preprocess_image(image.resize((width, height))).to(self.device)
-        clip_context = self.image_encoder.encode_image([image])
+
+        # clip_context = self.image_encoder.encode_image([image])
+
+        # TODO: Test code, to be deleted
+        if target_image is not None:
+            target_image = self.preprocess_image(target_image.resize((width, height))).to(self.device)
+            clip_context = self.image_encoder.encode_image([target_image])
+        else:
+            clip_context = self.image_encoder.encode_image([image])
+
         msk = torch.ones(1, num_frames, height//8, width//8, device=self.device)
         msk[:, 1:] = 0
         msk = torch.concat([torch.repeat_interleave(msk[:, 0:1], repeats=4, dim=1), msk[:, 1:]], dim=1)
@@ -235,8 +244,6 @@ class WanVideoPipeline(BasePipeline):
         tiled=True,
         tile_size=(30, 52),
         tile_stride=(15, 26),
-        tea_cache_l1_thresh=None,
-        tea_cache_model_id="",
         progress_bar_cmd=tqdm,
         progress_bar_st=None,
     ):
@@ -273,7 +280,7 @@ class WanVideoPipeline(BasePipeline):
         # Encode image
         if input_image is not None and self.image_encoder is not None:
             self.load_models_to_device(["image_encoder", "vae"])
-            image_emb = self.encode_image(input_image, num_frames, height, width)
+            image_emb = self.encode_image(input_image, num_frames, height, width, target_image = target_image)
             
             # DEBUG: To be deleted
             # image_emb['y'][:, -5:, -1:, :, :] = 1
@@ -300,9 +307,6 @@ class WanVideoPipeline(BasePipeline):
         # Extra input
         extra_input = self.prepare_extra_input(latents)
         
-        # TeaCache
-        tea_cache_posi = {"tea_cache": TeaCache(num_inference_steps, rel_l1_thresh=tea_cache_l1_thresh, model_id=tea_cache_model_id) if tea_cache_l1_thresh is not None else None}
-        tea_cache_nega = {"tea_cache": TeaCache(num_inference_steps, rel_l1_thresh=tea_cache_l1_thresh, model_id=tea_cache_model_id) if tea_cache_l1_thresh is not None else None}
         
         # Unified Sequence Parallel
         usp_kwargs = self.prepare_unified_sequence_parallel()
@@ -313,9 +317,9 @@ class WanVideoPipeline(BasePipeline):
             timestep = timestep.unsqueeze(0).to(dtype=self.torch_dtype, device=self.device)
 
             # Inference
-            noise_pred_posi = model_fn_wan_video(self.dit, latents, timestep=timestep, mask=mask, **prompt_emb_posi, **image_emb, **extra_input, **tea_cache_posi, **usp_kwargs)
+            noise_pred_posi = model_fn_wan_video(self.dit, latents, timestep=timestep, mask=mask, **prompt_emb_posi, **image_emb, **extra_input, **usp_kwargs)
             if cfg_scale != 1.0:
-                noise_pred_nega = model_fn_wan_video(self.dit, latents, timestep=timestep, mask=mask, **prompt_emb_nega, **image_emb, **extra_input, **tea_cache_nega, **usp_kwargs)
+                noise_pred_nega = model_fn_wan_video(self.dit, latents, timestep=timestep, mask=mask, **prompt_emb_nega, **image_emb, **extra_input, **usp_kwargs)
                 noise_pred = noise_pred_nega + cfg_scale * (noise_pred_posi - noise_pred_nega)
             else:
                 noise_pred = noise_pred_posi
@@ -333,58 +337,6 @@ class WanVideoPipeline(BasePipeline):
 
 
 
-class TeaCache:
-    def __init__(self, num_inference_steps, rel_l1_thresh, model_id):
-        self.num_inference_steps = num_inference_steps
-        self.step = 0
-        self.accumulated_rel_l1_distance = 0
-        self.previous_modulated_input = None
-        self.rel_l1_thresh = rel_l1_thresh
-        self.previous_residual = None
-        self.previous_hidden_states = None
-        
-        self.coefficients_dict = {
-            "Wan2.1-T2V-1.3B": [-5.21862437e+04, 9.23041404e+03, -5.28275948e+02, 1.36987616e+01, -4.99875664e-02],
-            "Wan2.1-T2V-14B": [-3.03318725e+05, 4.90537029e+04, -2.65530556e+03, 5.87365115e+01, -3.15583525e-01],
-            "Wan2.1-I2V-14B-480P": [2.57151496e+05, -3.54229917e+04,  1.40286849e+03, -1.35890334e+01, 1.32517977e-01],
-            "Wan2.1-I2V-14B-720P": [ 8.10705460e+03,  2.13393892e+03, -3.72934672e+02,  1.66203073e+01, -4.17769401e-02],
-        }
-        if model_id not in self.coefficients_dict:
-            supported_model_ids = ", ".join([i for i in self.coefficients_dict])
-            raise ValueError(f"{model_id} is not a supported TeaCache model id. Please choose a valid model id in ({supported_model_ids}).")
-        self.coefficients = self.coefficients_dict[model_id]
-
-    def check(self, dit: WanModel, x, t_mod):
-        modulated_inp = t_mod.clone()
-        if self.step == 0 or self.step == self.num_inference_steps - 1:
-            should_calc = True
-            self.accumulated_rel_l1_distance = 0
-        else:
-            coefficients = self.coefficients
-            rescale_func = np.poly1d(coefficients)
-            self.accumulated_rel_l1_distance += rescale_func(((modulated_inp-self.previous_modulated_input).abs().mean() / self.previous_modulated_input.abs().mean()).cpu().item())
-            if self.accumulated_rel_l1_distance < self.rel_l1_thresh:
-                should_calc = False
-            else:
-                should_calc = True
-                self.accumulated_rel_l1_distance = 0
-        self.previous_modulated_input = modulated_inp
-        self.step += 1
-        if self.step == self.num_inference_steps:
-            self.step = 0
-        if should_calc:
-            self.previous_hidden_states = x.clone()
-        return not should_calc
-
-    def store(self, hidden_states):
-        self.previous_residual = hidden_states - self.previous_hidden_states
-        self.previous_hidden_states = None
-
-    def update(self, hidden_states):
-        hidden_states = hidden_states + self.previous_residual
-        return hidden_states
-
-
 
 def model_fn_wan_video(
     dit: WanModel,
@@ -393,7 +345,6 @@ def model_fn_wan_video(
     context: torch.Tensor,
     clip_feature: Optional[torch.Tensor] = None,
     y: Optional[torch.Tensor] = None,
-    tea_cache: TeaCache = None,
     use_unified_sequence_parallel: bool = False,
     mask: Optional[torch.Tensor] = None,
     **kwargs,
@@ -407,17 +358,6 @@ def model_fn_wan_video(
     t = dit.time_embedding(sinusoidal_embedding_1d(dit.freq_dim, timestep))
     t_mod = dit.time_projection(t).unflatten(1, (6, dit.dim))
     context = dit.text_embedding(context)
-
-    if mask is not None:
-        mask_pooled = F.avg_pool3d(mask, kernel_size=(1,2,2), stride=(1,2,2))
-        mask_pooled = (mask_pooled > 0.25).float()
-        mask = mask_pooled.to(x.device)
-        mask_flat = mask_pooled.flatten(1).to(x.device)
-        # [1, (h//16)*(w//16)]
-
-        # print(mask.shape)
-        # print(mask_flat.shape)
-        # import pdb; pdb.set_trace()
     
     if dit.has_image_input:
         x = torch.cat([x, y], dim=1)  # (b, c_x + c_y, f, h, w), c = 20 + 16 (vae_output)
@@ -431,12 +371,6 @@ def model_fn_wan_video(
         dit.freqs[1][:h].view(1, h, 1, -1).expand(f, h, w, -1),
         dit.freqs[2][:w].view(1, 1, w, -1).expand(f, h, w, -1)
     ], dim=-1).reshape(f * h * w, 1, -1).to(x.device)
-    
-    # TeaCache
-    if tea_cache is not None:
-        tea_cache_update = tea_cache.check(dit, x, t_mod)
-    else:
-        tea_cache_update = False
     
 
     attn_maps = []
@@ -453,38 +387,38 @@ def model_fn_wan_video(
             # if block_id == 3:
             #     continue
             x, attn_map, _ = block(x, context, t_mod, freqs)
+
             attn_map = F.softmax(attn_map, dim=1)
             attn_maps.append(attn_map)
             B, S_q, S_k = attn_map.shape   # [1, 6240, 769]
             attn_map_3d = attn_map.view(B, f, h, w, S_k) # [1, F, 30, 52, 769]
-            if block_id != 100:
-                continue
-            if block_id == 5:
-                a1 = attn_map[0, :, 0]   # [6240]
-                attn_loss = 0
-                l2_norms = []
+            # if block_id != 100:
+            #     continue
+            # if block_id == 5:
+            #     a1 = attn_map[0, :, 0]   # [6240]
+            #     attn_loss = 0
+            #     l2_norms = []
 
-                for idx in range(257, 769):
-                    a2 = attn_map[0, :, idx] * mask_flat[0]        
-                    norm = torch.norm(a2, p=1)                
-                    l2_norms.append(norm.item())
+            #     for idx in range(257, 769):
+            #         a2 = attn_map[0, :, idx] * mask_flat[0]        
+            #         norm = torch.norm(a2, p=1)                
+            #         l2_norms.append(norm.item())
 
-                l2_norms = torch.tensor(l2_norms)                
-                topk_vals, topk_idx = torch.topk(l2_norms, k=5) 
-                topk_true_idx = topk_idx + 257
-                print("Top 5 idx:", topk_true_idx.tolist())
-                print("Top 5 L2 norms:", topk_vals.tolist())
-                import pdb; pdb.set_trace()
+            #     l2_norms = torch.tensor(l2_norms)                
+            #     topk_vals, topk_idx = torch.topk(l2_norms, k=5) 
+            #     topk_true_idx = topk_idx + 257
+            #     print("Top 5 idx:", topk_true_idx.tolist())
+            #     print("Top 5 L2 norms:", topk_vals.tolist())
+            #     import pdb; pdb.set_trace()
 
+            #     for idx in range(257, 769):
+            #         a2 = attn_map[0, :, idx]  # [6240]
+            #         a2 = a2 * mask_flat[0]
 
-                for idx in range(257, 769):
-                    a2 = attn_map[0, :, idx]  # [6240]
-                    a2 = a2 * mask_flat[0]
-
-                    dist = torch.norm(a1 - a2, p=2)
-                    attn_loss += dist.item()
-                print(f"Attention Loss: {attn_loss:.6f}")
-                import pdb; pdb.set_trace()
+            #         dist = torch.norm(a1 - a2, p=2)
+            #         attn_loss += dist.item()
+            #     print(f"Attention Loss: {attn_loss:.6f}")
+            #     import pdb; pdb.set_trace()
 
         #     for token_idx in range(0, 1):
         #     # token_idx = 257  # Visual token index
@@ -530,11 +464,13 @@ def prompt_clip_attn_loss(
         x = torch.cat([x, y], dim=1)  # (b, c_x + c_y, f, h, w)
         clip_emb = dit.img_emb(clip_feature)
         context = torch.cat([clip_emb, context], dim=1)  # [769, 5120]
-    if mask is not None:
-        mask_pooled = F.avg_pool3d(mask, kernel_size=(1,2,2), stride=(1,2,2))
-        mask_pooled = (mask_pooled > 0.25).float()
-        mask = mask_pooled.to(x.device)
-        mask_flat = mask_pooled.flatten(1).to(x.device)
+
+
+    # if mask is not None:
+    #     mask_pooled = F.avg_pool3d(mask, kernel_size=(1,2,2), stride=(1,2,2))
+    #     mask_pooled = (mask_pooled > 0.25).float()
+    #     mask = mask_pooled.to(x.device)
+    #     mask_flat = mask_pooled.flatten(1).to(x.device)
         # [1, (h//16)*(w//16)]
 
     x, (f, h, w) = dit.patchify(x)
@@ -543,6 +479,8 @@ def prompt_clip_attn_loss(
         dit.freqs[1][:h].view(1, h, 1, -1).expand(f, h, w, -1),
         dit.freqs[2][:w].view(1, 1, w, -1).expand(f, h, w, -1)
     ], dim=-1).reshape(f * h * w, 1, -1).to(x.device)
+    
+
     for block_id, block in enumerate(dit.blocks):
         x, attn_map, _ = block(x, context, t_mod, freqs)
         attn_map = F.softmax(attn_map, dim=1) 
