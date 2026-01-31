@@ -4,7 +4,7 @@ diffsynth_path = "/workspace/Wan-I2V-Attack"
 sys.path.append(diffsynth_path)
 from diffsynth.models.model_manager import ModelManager
 from diffsynth.pipelines.wan_video import WanVideoPipeline, prompt_clip_attn_loss, model_fn_wan_video
-from diffsynth.utils import crop_and_resize, register_vae_hooks, setup_pipe_modules, plot_loss_curve, save_adv_result
+from diffsynth.utils import crop_and_resize, register_vae_hooks, setup_pipe_modules, plot_loss_curve, save_adv_result, setup_pipe_attack_modules
 
 from PIL import Image
 from tqdm import tqdm
@@ -12,6 +12,7 @@ from tqdm import tqdm
 import copy
 import random
 import yaml
+import os
 
 
 def load_all_models():
@@ -37,84 +38,27 @@ def load_all_models():
         torch_dtype=torch.bfloat16,
     )
     pipe = WanVideoPipeline.from_model_manager(model_manager, torch_dtype=torch.bfloat16, device="cuda")
-    pipe = setup_pipe_modules(pipe)
+    pipe = setup_pipe_attack_modules(pipe)
     return pipe
 
 
-def prepare_data(pipe, image, target_image, prompt, h=480, w=832, num_frames=1):
-    # Encode Prompt
-    pipe.load_models_to_device(["text_encoder"])
-    with torch.no_grad():
-        prompt_emb_posi = pipe.encode_prompt(prompt=prompt, positive=True)      # [1, 512, 4096]
-
-    # Modify if needed
-    tiler_kwargs = {"tiled": False, "tile_size": (h / 16, w / 16), "tile_stride": (h / 32, w / 32)}
-
-    pipe.load_models_to_device(["image_encoder", "vae"])
-    with torch.no_grad():
-        image_emb_src = pipe.encode_image(
-            image, num_frames=num_frames, height=h, width=w, **tiler_kwargs
-        )   # clip: [1, 1 + 256, 1280], y: [1, C (4+16), 1+T/4, 60, 104]
-
-    # Register Hooks at Multiple Resolutions
-    saved_features = register_vae_hooks(pipe)
-
-    with torch.no_grad():
-        image_emb_tgt = pipe.encode_image(
-            target_image, num_frames=num_frames, height=h, width=w, **tiler_kwargs
-        )
-
-    target_features = copy.deepcopy(saved_features)
-    saved_features = {}
-
-    return prompt_emb_posi, image_emb_src, image_emb_tgt, saved_features, target_features
 
 
-
-def obtain_latent_sequence(pipe, h, w, num_frames, prompt_emb, image_emb_src):
-    noise = pipe.generate_noise(
-        (1, 16, (num_frames - 1) // 4 + 1, h//8, w//8), 
-        seed=0, device="cpu", dtype=torch.float32
-    )
-    noise = noise.to(dtype=pipe.torch_dtype, device=pipe.device)
-
-    latents_list = []
-    latents = noise
-    extra_input = pipe.prepare_extra_input(latents)
-
-    pipe.scheduler.set_timesteps(num_inference_steps=50, denoising_strength=1.0, shift=5.0)
-    pipe.load_models_to_device(["dit"])
-
-    with torch.no_grad():
-        for progress_id, timestep in enumerate(tqdm(pipe.scheduler.timesteps)):
-            latents_list.append(latents.detach().cpu())
-            timestep = timestep.unsqueeze(0).to(dtype=pipe.torch_dtype, device=pipe.device)
-            noise_pred = model_fn_wan_video(
-                pipe.dit, latents, timestep=timestep,
-                **prompt_emb, **image_emb_src, **extra_input
-            )
-            latents = pipe.scheduler.step(noise_pred, pipe.scheduler.timesteps[progress_id], latents)
-
-    # Save
-    # torch.save(latents_list, 'latents_list.pt')
-
-    return latents_list
-
-
-
-def init_adv_image(I, epsilon=0.03, value_range=(-1.0, 1.0)):
+def init_adv_image(I, epsilon=0.03, value_range=(-1.0, 1.0), device=None):
     if not isinstance(I, torch.Tensor):
         raise TypeError("I must be a torch.Tensor")
-    I_adv = I.clone()
-    I_adv = I_adv + torch.empty_like(I_adv).uniform_(-epsilon, epsilon)
-    I_adv = torch.clamp(I_adv, value_range[0], value_range[1]).detach()
+    I = I.detach().clone()
+    if device is not None:
+        I = I.to(device)
+    noise = torch.empty_like(I).uniform_(-epsilon, epsilon)
+    I_adv = I + noise
+    I_adv = torch.clamp(I_adv, value_range[0], value_range[1])
     I_adv.requires_grad_(True)
     return I_adv
 
 
 
-def run_attack(pipe, image, h, w, num_frames, prompt_emb, image_emb_src, image_emb_tgt, num_steps=400, epsilon=20.0 / 255 * 2, step_size=2.0 / 255 * 2):
-    latents_list = obtain_latent_sequence(pipe, h, w, num_frames, prompt_emb, image_emb_src)
+def run_attack(pipe, image, h, w, num_frames, prompt_emb, image_emb_src, image_emb_tgt, latents_list, num_steps=400, epsilon=20.0 / 255 * 2, step_size=2.0 / 255 * 2):
 
     tiler_kwargs = {"tiled": False, "tile_size": (h / 16, w / 16), "tile_stride": (h / 32, w / 32)}
 
@@ -122,6 +66,7 @@ def run_attack(pipe, image, h, w, num_frames, prompt_emb, image_emb_src, image_e
     I_adv_before = I_adv.clone().detach()
 
     I_adv = init_adv_image(I_adv, epsilon=epsilon, value_range=(-1.0, 1.0))
+
 
     loss_history = []
 
@@ -135,7 +80,7 @@ def run_attack(pipe, image, h, w, num_frames, prompt_emb, image_emb_src, image_e
         L_enc_1 = torch.nn.functional.mse_loss(image_emb_adv["y"][:, 4:, :], image_emb_tgt["y"][:, 4:, :])
 
 
-        pipe.scheduler.set_timesteps(num_inference_steps=50, denoising_strength=1.0, shift=5.0)
+        pipe.scheduler.set_timesteps(num_inference_steps=25, denoising_strength=1.0, shift=5.0)
         idx = random.randrange(len(pipe.scheduler.timesteps))
 
 
@@ -149,7 +94,7 @@ def run_attack(pipe, image, h, w, num_frames, prompt_emb, image_emb_src, image_e
             **prompt_emb, **image_emb_adv, **extra_input
         )
 
-        L = attn_loss + L_enc_1
+        L = attn_loss 
         print(f"Step {step+1}/{num_steps}, Loss: {L.item():.6f}")
         loss_history.append(L.item())
         L.backward()
@@ -183,14 +128,33 @@ def main():
     target_image = Image.open(cfg["data"]["target_image_path"]).resize((w, h))
     prompt = cfg["prompt"]["text"]
 
-    prompt_emb, image_emb_src, image_emb_tgt, saved_features, target_features = prepare_data(pipe, image, target_image, prompt, 
-                                                                                                h=h, w=w, num_frames=num_frames)
 
+    cache_files = {
+        'prompt_emb': 'cache/prompt_emb.pt',
+        'image_emb_src': 'cache/image_emb_src.pt',
+        'image_emb_tgt': 'cache/image_emb_tgt.pt',
+        'latents_list': 'cache/latents_list.pt'
+    }
+
+    # import pdb; pdb.set_trace()
+    if all(os.path.exists(f) for f in cache_files.values()):
+        print("Loading cached data...")
+        prompt_emb = torch.load(cache_files['prompt_emb'])
+        image_emb_src = torch.load(cache_files['image_emb_src'])
+        image_emb_tgt = torch.load(cache_files['image_emb_tgt'])
+        latents_list = torch.load(cache_files['latents_list'])
+        print("Loaded successfully!")
+    else:
+        raise FileNotFoundError(
+            "Data not found in cache/. Please prepare and preprocess data first by running prepare_data.py"
+        )
+
+                                                                                            
     num_steps = cfg["attack"]["num_steps"]
     epsilon = eval(cfg["attack"]["epsilon"])
     step_size = epsilon / 10
                                          
-    run_attack(pipe, image, h, w, num_frames, prompt_emb, image_emb_src, image_emb_tgt, 
+    run_attack(pipe, image, h, w, num_frames, prompt_emb, image_emb_src, image_emb_tgt, latents_list,
                 num_steps=num_steps, epsilon=epsilon, step_size=step_size)
 
 

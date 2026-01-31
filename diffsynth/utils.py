@@ -20,6 +20,13 @@ def setup_pipe_modules(pipe, enable_vram_management=False, num_persistent_param_
     return pipe
 
 
+def setup_pipe_attack_modules(pipe):
+    for module_name in ["dit", "vae", "image_encoder"]:
+        if hasattr(pipe, module_name):
+            getattr(pipe, module_name).to(pipe.device)
+    return pipe
+
+
 def crop_and_resize(image, mask, output_size=(224, 4), offset_ratio=0.15):
     """
     Crop and resize an image and its corresponding mask to a square region.

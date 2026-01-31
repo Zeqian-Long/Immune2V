@@ -286,8 +286,7 @@ class WanVideoPipeline(BasePipeline):
             # image_emb['y'][:, -5:, -1:, :, :] = 1
             # image_emb["clip_feature"] = torch.full((1, 257, 1280), 200).to(dtype=self.torch_dtype, device=self.device)
             # image_emb["clip_feature"] = image_emb["clip_feature"] + 200 * torch.randn_like(image_emb["clip_feature"])
-            # target_image = self.preprocess_image(target_image.resize((width, height))).to(self.device)
-            # image_emb["clip_feature"] = self.image_encoder.encode_image([target_image]).to(dtype=self.torch_dtype, device=self.device)
+
         else:
             image_emb = {}
         
@@ -301,7 +300,6 @@ class WanVideoPipeline(BasePipeline):
             # [1, 1, 1, h//8, w//8]
         else:
             mask = None
-
 
             
         # Extra input
@@ -362,6 +360,7 @@ def model_fn_wan_video(
     if dit.has_image_input:
         x = torch.cat([x, y], dim=1)  # (b, c_x + c_y, f, h, w), c = 20 + 16 (vae_output)
         clip_embdding = dit.img_emb(clip_feature)
+        # clip_embdding = torch.ones_like(clip_embdding)
         context = torch.cat([clip_embdding, context], dim=1) # (condition) [257, 5120] + [512, 5120] -> [769, 5120]
     
     x, (f, h, w) = dit.patchify(x)
@@ -378,62 +377,95 @@ def model_fn_wan_video(
     if use_unified_sequence_parallel:
         if dist.is_initialized() and dist.get_world_size() > 1:
             x = torch.chunk(x, get_sequence_parallel_world_size(), dim=1)[get_sequence_parallel_rank()]
-    if tea_cache_update:
-        x = tea_cache.update(x)
+
     else:
         save_dir = "cross_attn"
         os.makedirs(save_dir, exist_ok=True)
+        Diff = 0
         for block_id, block in enumerate(dit.blocks):
-            # if block_id == 3:
-            #     continue
-            x, attn_map, _ = block(x, context, t_mod, freqs)
 
-            attn_map = F.softmax(attn_map, dim=1)
+            x, attn_map, diff = block(x, context, t_mod, freqs)
+
             attn_maps.append(attn_map)
-            B, S_q, S_k = attn_map.shape   # [1, 6240, 769]
-            attn_map_3d = attn_map.view(B, f, h, w, S_k) # [1, F, 30, 52, 769]
-            # if block_id != 100:
-            #     continue
+            B, N_q, N_k = attn_map.shape   # [1, 6240, 769]
+            attn_map_3d = attn_map.view(B, f, h, w, N_k) # [1, F, 30, 52, 769]
+
+
+            # if block_id <= 6:
+            #     Diff += diff
+            #     if block_id == 6:
+            #         Diff /= 7
+            #         print(f"Average Cross Attention Image-Text Diff: {Diff.item()}")
+
+            # DEBUG: To be deleted
+            # if block_id == 6:
+            #     attn_img = attn_map[0, :1560, :257]  # [6240, 257]
+            #     attn_txt = attn_map[0, :1560, 257:]  # [6240, 512]
+
+            #     eps = 1e-8
+
+            #     attn_img = attn_img / (attn_img.sum(dim=0, keepdim=True) + eps)
+            #     attn_txt = attn_txt / (attn_txt.sum(dim=0, keepdim=True) + eps)
+
+
+            #     attn_img = attn_img.clamp(min=eps)
+            #     attn_txt = attn_txt.clamp(min=eps)
+            #     entropy_img = -(attn_img * attn_img.log()).sum(dim=0)
+            #     entropy_txt = -(attn_txt * attn_txt.log()).sum(dim=0)
+
+            #     entropy_img_np = entropy_img.detach().float().cpu().numpy() # [257]
+            #     entropy_txt_np = entropy_txt.detach().float().cpu().numpy() # [512]
+
+
+            #     plt.figure(figsize=(6, 4))
+
+            #     plt.hist(
+            #         entropy_txt_np,
+            #         bins=40,
+            #         density=True,       
+            #         alpha=0.6,
+            #         color='tab:blue',
+            #         label='txt (512)'
+            #     )
+
+            #     plt.hist(
+            #         entropy_img_np,
+            #         bins=40,
+            #         density=True,
+            #         alpha=0.6,
+            #         color='tab:orange',
+            #         label='ctx (257)'
+            #     )
+
+            #     plt.axvline(np.median(entropy_txt_np), color='tab:blue', linestyle='--')
+            #     plt.axvline(np.median(entropy_img_np), color='tab:orange', linestyle='--')
+
+            #     plt.xlabel('Attention Entropy')
+            #     plt.ylabel('Density')
+            #     plt.title(f'Entropy Distribution at Block {block_id}')
+            #     plt.legend()
+            #     plt.tight_layout()
+            #     plt.show()
+
+            #     plt.savefig(f'block_{block_id}_entropy_dist.png', dpi=300, bbox_inches='tight')
+            #     import pdb; pdb.set_trace()
+
+
+
             # if block_id == 5:
-            #     a1 = attn_map[0, :, 0]   # [6240]
-            #     attn_loss = 0
-            #     l2_norms = []
-
-            #     for idx in range(257, 769):
-            #         a2 = attn_map[0, :, idx] * mask_flat[0]        
-            #         norm = torch.norm(a2, p=1)                
-            #         l2_norms.append(norm.item())
-
-            #     l2_norms = torch.tensor(l2_norms)                
-            #     topk_vals, topk_idx = torch.topk(l2_norms, k=5) 
-            #     topk_true_idx = topk_idx + 257
-            #     print("Top 5 idx:", topk_true_idx.tolist())
-            #     print("Top 5 L2 norms:", topk_vals.tolist())
+            #     for token_idx in range(0, 8):
+            #         # token_idx = 257  # Visual token index
+            #         # for frame in range(f):
+            #             attn_single = attn_map_3d[0, 0, :, :, token_idx]  
+            #             attn_single = attn_single.detach().cpu().float().numpy()
+            #             plt.imshow(attn_single, cmap='turbo')   # 'plasma', 'inferno', 'magma'
+            #             plt.colorbar()
+            #             plt.title(f"Token {token_idx} Attention")
+            #             plt.axis('on')
+            #             save_path = os.path.join(save_dir, f"attn_block{block_id}_token{token_idx}_frame{0}.png")
+            #             plt.savefig(save_path, bbox_inches='tight')
+            #             plt.close()
             #     import pdb; pdb.set_trace()
-
-            #     for idx in range(257, 769):
-            #         a2 = attn_map[0, :, idx]  # [6240]
-            #         a2 = a2 * mask_flat[0]
-
-            #         dist = torch.norm(a1 - a2, p=2)
-            #         attn_loss += dist.item()
-            #     print(f"Attention Loss: {attn_loss:.6f}")
-            #     import pdb; pdb.set_trace()
-
-        #     for token_idx in range(0, 1):
-        #     # token_idx = 257  # Visual token index
-        #         attn_single = attn_map_3d[0, 0, :, :, token_idx]  
-        #         attn_single = attn_single.detach().cpu().float().numpy()
-        #         plt.imshow(attn_single, cmap='turbo')   # 'plasma', 'inferno', 'magma'
-        #         plt.colorbar()
-        #         plt.title(f"Token {token_idx} Attention")
-        #         plt.axis('on')
-        #         save_path = os.path.join(save_dir, f"attn_block{block_id}_token{token_idx}.png")
-        #         plt.savefig(save_path, bbox_inches='tight')
-        #         plt.close()
-        # import pdb; pdb.set_trace()
-        if tea_cache is not None:
-            tea_cache.store(x)
 
     x = dit.head(x, t)
     if use_unified_sequence_parallel:
@@ -450,13 +482,9 @@ def prompt_clip_attn_loss(
     context: torch.Tensor,
     clip_feature: torch.Tensor = None,
     y: torch.Tensor = None,
-    mask: Optional[torch.Tensor] = None,
     **kwargs,
 ):
-    """
-    Compute attention-based loss at block 5 of WanModel.
-    Stops immediately after computing the loss (no prediction head / unpatchify).
-    """
+
     t = dit.time_embedding(sinusoidal_embedding_1d(dit.freq_dim, timestep))
     t_mod = dit.time_projection(t).unflatten(1, (6, dit.dim))
     context = dit.text_embedding(context)
@@ -464,14 +492,6 @@ def prompt_clip_attn_loss(
         x = torch.cat([x, y], dim=1)  # (b, c_x + c_y, f, h, w)
         clip_emb = dit.img_emb(clip_feature)
         context = torch.cat([clip_emb, context], dim=1)  # [769, 5120]
-
-
-    # if mask is not None:
-    #     mask_pooled = F.avg_pool3d(mask, kernel_size=(1,2,2), stride=(1,2,2))
-    #     mask_pooled = (mask_pooled > 0.25).float()
-    #     mask = mask_pooled.to(x.device)
-    #     mask_flat = mask_pooled.flatten(1).to(x.device)
-        # [1, (h//16)*(w//16)]
 
     x, (f, h, w) = dit.patchify(x)
     freqs = torch.cat([
@@ -482,18 +502,25 @@ def prompt_clip_attn_loss(
     
 
     for block_id, block in enumerate(dit.blocks):
-        x, attn_map, _ = block(x, context, t_mod, freqs)
-        attn_map = F.softmax(attn_map, dim=1) 
+        x, attn_map, diff = block(x, context, t_mod, freqs)
+        # attn_map = F.softmax(attn_map, dim=1) 
         cross_attn_loss = 0
-        if block_id == 0:
-            for anchor_idx in range(0, 1):  
-                a1 = attn_map[0, :, anchor_idx]   # [6240]
-                # a1 = attn_map[0, :, 0]   # [6240]
-                for idx in range(257, 769):
-                    a2 = attn_map[0, :, idx]  # [6240]
-                    dist = torch.norm(a1 - a2, p=2)
-                    cross_attn_loss += dist
-                # if block_id == 5:
-            return cross_attn_loss
+
+        if block_id <= 6:
+            cross_attn_loss += diff
+            if block_id == 6:
+                return cross_attn_loss 
+
+        # if block_id == 0:
+        #     for anchor_idx in range(0, 1):  
+        #         a1 = attn_map[0, :, anchor_idx]   # [6240]
+        #         # a1 = attn_map[0, :, 0]   # [6240]
+        #         for idx in range(257, 769):
+        #             a2 = attn_map[0, :, idx]  # [6240]
+        #             dist = torch.norm(a1 - a2, p=2)
+        #             cross_attn_loss += dist
+        #         # if block_id == 5:
+        #     return cross_attn_loss
+
     return torch.tensor(0.0, device=x.device)
 

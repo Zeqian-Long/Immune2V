@@ -180,36 +180,37 @@ class CrossAttention(nn.Module):
             ctx = y[:, 257:]
         else:
             ctx = y
-        q = self.norm_q(self.q(x)) # [1, 6240, 5120]
+        q = self.norm_q(self.q(x)) # [1, T H W, 5120]
         k = self.norm_k(self.k(ctx)) # [1, 512, 5120]
         v = self.v(ctx)
-        x = self.attn(q, k, v)
-        
+        x = self.attn(q, k, v) # [1, T H W, 5120]
 
 
         attn_scores_text = torch.matmul(q, k.transpose(-2, -1)) / (q.shape[-1] ** 0.5)
-        # attn_map_text = F.softmax(attn_scores_text, dim=-1) # [1, 6240, 512]
-        attn_map_text = attn_scores_text
+        attn_map_text = F.softmax(attn_scores_text, dim=-1) # [1, 6240, 512]
+        # attn_map_text = attn_scores_text
 
-        # print("attn_map_text:", attn_map_text.shape)
-        # print(attn_map_text)
+
         if self.has_image_input:
             k_img = self.norm_k_img(self.k_img(img)) # [1, 257, 5120]
             v_img = self.v_img(img)
             y = flash_attention(q, k_img, v_img, num_heads=self.num_heads)
+
+            diff = torch.norm(x - y)
+
+            # print(f"Cross Attention Image-Text Diff: {diff.item()}")
+            # import pdb; pdb.set_trace()
+
             # y = torch.ones_like(x) * 1
 
             attn_scores_img = torch.matmul(q, k_img.transpose(-2, -1)) / (q.shape[-1] ** 0.5)
-            # attn_map_img = F.softmax(attn_scores_img, dim=-1) # [1, 6240, 257]
-            attn_map_img = attn_scores_img
-            # print("attn_map_img:", attn_map_img.shape)
-            # print(attn_map_img)
+            attn_map_img = F.softmax(attn_scores_img, dim=-1) # [1, T H W, 257]
+            # attn_map_img = attn_scores_img
 
             attn_map = torch.cat([attn_map_img, attn_map_text], dim=-1) 
-            # print("attn_map:", attn_map.shape)
-            # print(attn_map)
+
             x = x + y
-        return self.o(x), attn_map if self.has_image_input else None
+        return self.o(x), attn_map if self.has_image_input else None, y if self.has_image_input else None
 
 
 class GateModule(nn.Module):
@@ -245,11 +246,11 @@ class DiTBlock(nn.Module):
         self_attn_out, self_attn_loss = self.self_attn(input_x, freqs)
 
         x = self.gate(x, gate_msa, self_attn_out)
-        a, attn_map = self.cross_attn(self.norm3(x), context)
+        a, attn_map, diff = self.cross_attn(self.norm3(x), context)
         x = x + a
         input_x = modulate(self.norm2(x), shift_mlp, scale_mlp)
         x = self.gate(x, gate_mlp, self.ffn(input_x))
-        return x, attn_map, self_attn_loss
+        return x, attn_map, diff
 
 
 class MLP(torch.nn.Module):
