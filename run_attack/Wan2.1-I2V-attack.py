@@ -4,7 +4,7 @@ diffsynth_path = "/workspace/Wan-I2V-Attack"
 sys.path.append(diffsynth_path)
 from diffsynth.models.model_manager import ModelManager
 from diffsynth.pipelines.wan_video import WanVideoPipeline, prompt_clip_attn_loss, model_fn_wan_video
-from diffsynth.utils import crop_and_resize, register_vae_hooks, setup_pipe_modules, plot_loss_curve, save_adv_result, setup_pipe_attack_modules
+from diffsynth.utils import crop_and_resize, register_vae_hooks, setup_pipe_modules, plot_loss_curve, save_adv_result
 
 from PIL import Image
 from tqdm import tqdm
@@ -38,9 +38,8 @@ def load_all_models():
         torch_dtype=torch.bfloat16,
     )
     pipe = WanVideoPipeline.from_model_manager(model_manager, torch_dtype=torch.bfloat16, device="cuda")
-    pipe = setup_pipe_attack_modules(pipe)
+    pipe = setup_pipe_modules(pipe, attack=True)
     return pipe
-
 
 
 
@@ -80,7 +79,7 @@ def run_attack(pipe, image, h, w, num_frames, prompt_emb, image_emb_src, image_e
         L_enc_1 = torch.nn.functional.mse_loss(image_emb_adv["y"][:, 4:, :], image_emb_tgt["y"][:, 4:, :])
 
 
-        pipe.scheduler.set_timesteps(num_inference_steps=25, denoising_strength=1.0, shift=5.0)
+        pipe.scheduler.set_timesteps(num_inference_steps=25, denoising_strength=1.0, shift=0.0)
         idx = random.randrange(len(pipe.scheduler.timesteps))
 
 
@@ -104,6 +103,7 @@ def run_attack(pipe, image, h, w, num_frames, prompt_emb, image_emb_src, image_e
         # if step == 200:
         #     step_size *= 0.5
 
+        # PGD, Clamp
         sgn = I_adv.grad.data.sign()
         I_adv.data = I_adv.data - step_size * sgn
         delta = torch.clamp(I_adv - I_adv_before, min=-epsilon, max=epsilon)

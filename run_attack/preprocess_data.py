@@ -3,14 +3,13 @@ import sys
 diffsynth_path = "/workspace/Wan-I2V-Attack"
 sys.path.append(diffsynth_path)
 from diffsynth.models.model_manager import ModelManager
-from diffsynth.pipelines.wan_video import WanVideoPipeline, prompt_clip_attn_loss, model_fn_wan_video
-from diffsynth.utils import crop_and_resize, register_vae_hooks, setup_pipe_modules, plot_loss_curve, save_adv_result
+from diffsynth.pipelines.wan_video import WanVideoPipeline, model_fn_wan_video
+from diffsynth.utils import register_vae_hooks, setup_pipe_modules
 
 from PIL import Image
 from tqdm import tqdm
 
 import copy
-import random
 import yaml
 import os
 
@@ -38,7 +37,7 @@ def load_all_models():
         torch_dtype=torch.bfloat16,
     )
     pipe = WanVideoPipeline.from_model_manager(model_manager, torch_dtype=torch.bfloat16, device="cuda")
-    pipe = setup_pipe_modules(pipe)
+    pipe = setup_pipe_modules(pipe, attack=False)
     return pipe
 
 
@@ -51,6 +50,7 @@ def prepare_data(pipe, image, target_image, prompt, h=480, w=832, num_frames=1):
     # Modify if needed
     tiler_kwargs = {"tiled": False, "tile_size": (h / 16, w / 16), "tile_stride": (h / 32, w / 32)}
 
+    # Encode Image
     pipe.load_models_to_device(["image_encoder", "vae"])
     with torch.no_grad():
         image_emb_src = pipe.encode_image(
@@ -72,7 +72,8 @@ def prepare_data(pipe, image, target_image, prompt, h=480, w=832, num_frames=1):
 
 
 
-def obtain_latent_sequence(pipe, h, w, num_frames, prompt_emb, image_emb_src):
+def obtain_latent_sequence(pipe, h, w, num_frames, prompt_emb, image_emb_src, num_inference_steps=25):
+
     noise = pipe.generate_noise(
         (1, 16, (num_frames - 1) // 4 + 1, h//8, w//8), 
         seed=0, device="cpu", dtype=torch.float32
@@ -83,7 +84,7 @@ def obtain_latent_sequence(pipe, h, w, num_frames, prompt_emb, image_emb_src):
     latents = noise
     extra_input = pipe.prepare_extra_input(latents)
 
-    pipe.scheduler.set_timesteps(num_inference_steps=25, denoising_strength=1.0, shift=5.0)
+    pipe.scheduler.set_timesteps(num_inference_steps=num_inference_steps, denoising_strength=1.0, shift=0.0)
     pipe.load_models_to_device(["dit"])
 
     with torch.no_grad():
@@ -96,11 +97,7 @@ def obtain_latent_sequence(pipe, h, w, num_frames, prompt_emb, image_emb_src):
             )
             latents = pipe.scheduler.step(noise_pred, pipe.scheduler.timesteps[progress_id], latents)
 
-    # Save
-    torch.save(latents_list, 'latents_list.pt')
-
     return latents_list
-
 
 
 def main():
@@ -111,7 +108,9 @@ def main():
 
     h = cfg["video"]["height"]
     w = cfg["video"]["width"]
+
     num_frames = cfg["video"]["num_frames"]
+    num_inference_steps = cfg["video"]["denoising_steps"]
 
     image = Image.open(cfg["data"]["image_path"]).resize((w, h))
     target_image = Image.open(cfg["data"]["target_image_path"]).resize((w, h))
@@ -120,7 +119,7 @@ def main():
     prompt_emb, image_emb_src, image_emb_tgt, saved_features, target_features = prepare_data(pipe, image, target_image, prompt, 
                                                                                                 h=h, w=w, num_frames=num_frames)
 
-    latents_list = obtain_latent_sequence(pipe, h, w, num_frames, prompt_emb, image_emb_src)
+    latents_list = obtain_latent_sequence(pipe, h, w, num_frames, prompt_emb, image_emb_src, num_inference_steps=num_inference_steps)
 
     os.makedirs("cache", exist_ok=True)
     torch.save(prompt_emb, "cache/prompt_emb.pt")
@@ -128,8 +127,7 @@ def main():
     torch.save(image_emb_tgt, "cache/image_emb_tgt.pt")
     torch.save(latents_list, "cache/latents_list.pt")
     print("Saved to cache/")
-                                                                                            
-
+                                                                                          
 
 if __name__ == "__main__":
     main()

@@ -7,7 +7,8 @@ data:
 video:
   height: 480
   width: 832
-  num_frames: 9     
+  num_frames: 9  
+  denoising_steps: 25   
 
 
 prompt:
