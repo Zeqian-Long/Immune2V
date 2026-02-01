@@ -3,9 +3,9 @@ import sys
 diffsynth_path = "/workspace/Wan-I2V-Attack"
 sys.path.append(diffsynth_path)
 from diffsynth.models.model_manager import ModelManager
-from diffsynth.pipelines.wan_video import WanVideoPipeline, prompt_clip_attn_loss
+from diffsynth.pipelines.wan_video import WanVideoPipeline
 from diffsynth.data.video import save_video, VideoData, LowMemoryImageFolder
-from diffsynth.utils import crop_and_resize, register_vae_hooks, setup_pipe_modules, plot_loss_curve, save_adv_result
+from diffsynth.utils import setup_pipe_modules
 from PIL import Image
 
 # Load models
@@ -41,9 +41,9 @@ w = 832
 # h = 224
 # w = 224
 
-# image = Image.open("I_adv_final_hike.jpg")
+image = Image.open("I_adv_final_hike.jpg")
 
-image = Image.open("data/image/swan.jpg")
+# image = Image.open("data/image/swan.jpg")
 
 # image = Image.open("data/image/man.jpg")
 
@@ -55,11 +55,11 @@ image = image.resize((w, h))
 pipe = setup_pipe_modules(pipe)
 
 video = pipe(
-    prompt="a black swan is swimming in the river",
+    prompt="a black swan",
     negative_prompt="色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走",
     input_image=image,
     num_inference_steps=25, height=h, width=w,
-    seed=0, tiled=True, num_frames=21, target_image=None,
+    seed=0, tiled=True, num_frames=17, target_image=None,
 )
 save_video(video, "swan_attacked.mp4", fps=15, quality=5)
 

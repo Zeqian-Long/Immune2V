@@ -82,9 +82,10 @@ def obtain_latent_sequence(pipe, h, w, num_frames, prompt_emb, image_emb_src, nu
 
     latents_list = []
     latents = noise
+
     extra_input = pipe.prepare_extra_input(latents)
 
-    pipe.scheduler.set_timesteps(num_inference_steps=num_inference_steps, denoising_strength=1.0, shift=0.0)
+    pipe.scheduler.set_timesteps(num_inference_steps=num_inference_steps, denoising_strength=1.0, shift=5.0)
     pipe.load_models_to_device(["dit"])
 
     with torch.no_grad():
@@ -95,6 +96,7 @@ def obtain_latent_sequence(pipe, h, w, num_frames, prompt_emb, image_emb_src, nu
                 pipe.dit, latents, timestep=timestep,
                 **prompt_emb, **image_emb_src, **extra_input
             )
+            
             latents = pipe.scheduler.step(noise_pred, pipe.scheduler.timesteps[progress_id], latents)
 
     return latents_list

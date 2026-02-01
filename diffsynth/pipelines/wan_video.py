@@ -19,11 +19,6 @@ from ..models.wan_video_text_encoder import T5RelativeEmbedding, T5LayerNorm
 from ..models.wan_video_dit import RMSNorm, sinusoidal_embedding_1d
 from ..models.wan_video_vae import RMS_norm, CausalConv3d, Upsample
 
-import matplotlib.pyplot as plt
-from sklearn.decomposition import PCA
-import torch.nn.functional as F
-from open_clip import create_model_and_transforms, get_tokenizer
-
 
 class WanVideoPipeline(BasePipeline):
 
@@ -281,11 +276,6 @@ class WanVideoPipeline(BasePipeline):
         if input_image is not None and self.image_encoder is not None:
             self.load_models_to_device(["image_encoder", "vae"])
             image_emb = self.encode_image(input_image, num_frames, height, width, target_image = target_image)
-            
-            # DEBUG: To be deleted
-            # image_emb['y'][:, -5:, -1:, :, :] = 1
-            # image_emb["clip_feature"] = torch.full((1, 257, 1280), 200).to(dtype=self.torch_dtype, device=self.device)
-            # image_emb["clip_feature"] = image_emb["clip_feature"] + 200 * torch.randn_like(image_emb["clip_feature"])
 
         else:
             image_emb = {}
@@ -384,7 +374,7 @@ def model_fn_wan_video(
         Diff = 0
         for block_id, block in enumerate(dit.blocks):
 
-            x, attn_map, diff = block(x, context, t_mod, freqs)
+            x, attn_map, diff, self_attn_loss = block(x, context, t_mod, freqs)
 
             attn_maps.append(attn_map)
             B, N_q, N_k = attn_map.shape   # [1, 6240, 769]
@@ -397,61 +387,8 @@ def model_fn_wan_video(
             #         Diff /= 7
             #         print(f"Average Cross Attention Image-Text Diff: {Diff.item()}")
 
-            # DEBUG: To be deleted
-            # if block_id == 6:
-            #     attn_img = attn_map[0, :1560, :257]  # [6240, 257]
-            #     attn_txt = attn_map[0, :1560, 257:]  # [6240, 512]
 
-            #     eps = 1e-8
-
-            #     attn_img = attn_img / (attn_img.sum(dim=0, keepdim=True) + eps)
-            #     attn_txt = attn_txt / (attn_txt.sum(dim=0, keepdim=True) + eps)
-
-
-            #     attn_img = attn_img.clamp(min=eps)
-            #     attn_txt = attn_txt.clamp(min=eps)
-            #     entropy_img = -(attn_img * attn_img.log()).sum(dim=0)
-            #     entropy_txt = -(attn_txt * attn_txt.log()).sum(dim=0)
-
-            #     entropy_img_np = entropy_img.detach().float().cpu().numpy() # [257]
-            #     entropy_txt_np = entropy_txt.detach().float().cpu().numpy() # [512]
-
-
-            #     plt.figure(figsize=(6, 4))
-
-            #     plt.hist(
-            #         entropy_txt_np,
-            #         bins=40,
-            #         density=True,       
-            #         alpha=0.6,
-            #         color='tab:blue',
-            #         label='txt (512)'
-            #     )
-
-            #     plt.hist(
-            #         entropy_img_np,
-            #         bins=40,
-            #         density=True,
-            #         alpha=0.6,
-            #         color='tab:orange',
-            #         label='ctx (257)'
-            #     )
-
-            #     plt.axvline(np.median(entropy_txt_np), color='tab:blue', linestyle='--')
-            #     plt.axvline(np.median(entropy_img_np), color='tab:orange', linestyle='--')
-
-            #     plt.xlabel('Attention Entropy')
-            #     plt.ylabel('Density')
-            #     plt.title(f'Entropy Distribution at Block {block_id}')
-            #     plt.legend()
-            #     plt.tight_layout()
-            #     plt.show()
-
-            #     plt.savefig(f'block_{block_id}_entropy_dist.png', dpi=300, bbox_inches='tight')
-            #     import pdb; pdb.set_trace()
-
-
-
+            # DEBUG:    Attention Map Visualization
             # if block_id == 5:
             #     for token_idx in range(0, 8):
             #         # token_idx = 257  # Visual token index
@@ -500,17 +437,18 @@ def prompt_clip_attn_loss(
         dit.freqs[2][:w].view(1, 1, w, -1).expand(f, h, w, -1)
     ], dim=-1).reshape(f * h * w, 1, -1).to(x.device)
     
-
+    cross_attn_loss = 0
     for block_id, block in enumerate(dit.blocks):
-        x, attn_map, diff = block(x, context, t_mod, freqs)
-        # attn_map = F.softmax(attn_map, dim=1) 
-        cross_attn_loss = 0
-
+        x, attn_map, diff, self_attn_loss = block(x, context, t_mod, freqs)
+        
         if block_id <= 6:
             cross_attn_loss += diff
+            # cross_attn_loss += self_attn_loss
             if block_id == 6:
                 return cross_attn_loss 
+        
 
+        # DEBUG: Old Implementation
         # if block_id == 0:
         #     for anchor_idx in range(0, 1):  
         #         a1 = attn_map[0, :, anchor_idx]   # [6240]

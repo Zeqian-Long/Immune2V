@@ -142,15 +142,19 @@ class SelfAttention(nn.Module):
         k = rope_apply(k, freqs, self.num_heads)
         x = self.attn(q, k, v)
 
+        # TODO: Check the vulnerability here!
+
         # Self attention loss
-        # attn_scores = torch.matmul(q, k.transpose(-2, -1)) / (q.shape[-1] ** 0.5)
-        # self_attn_map = torch.softmax(attn_scores, dim=-1)
+        attn_scores = torch.matmul(q, k.transpose(-2, -1)) / (q.shape[-1] ** 0.5)
+        self_attn_map = torch.softmax(attn_scores, dim=-1)
+
+        self_attn_loss = torch.norm(x[0, :1560, :])
         # N = self_attn_map.size(-1)
         # uniform = torch.full_like(self_attn_map, 1.0 / N) 
         # l2_per_row = torch.sqrt(((self_attn_map - uniform) ** 2).sum(dim=-1))  # [B, N]
         # self_attn_loss = l2_per_row.mean()
 
-        return self.o(x), None
+        return self.o(x), self_attn_loss
 
 
 class CrossAttention(nn.Module):
@@ -185,10 +189,8 @@ class CrossAttention(nn.Module):
         v = self.v(ctx)
         x = self.attn(q, k, v) # [1, T H W, 5120]
 
-
         attn_scores_text = torch.matmul(q, k.transpose(-2, -1)) / (q.shape[-1] ** 0.5)
         attn_map_text = F.softmax(attn_scores_text, dim=-1) # [1, 6240, 512]
-        # attn_map_text = attn_scores_text
 
 
         if self.has_image_input:
@@ -196,21 +198,16 @@ class CrossAttention(nn.Module):
             v_img = self.v_img(img)
             y = flash_attention(q, k_img, v_img, num_heads=self.num_heads)
 
-            diff = torch.norm(x - y)
 
-            # print(f"Cross Attention Image-Text Diff: {diff.item()}")
-            # import pdb; pdb.set_trace()
-
-            # y = torch.ones_like(x) * 1
+            cos = F.cosine_similarity(x[:, :], y[:, :], dim=-1)  # [B, N]
+            diff = 1 - cos.mean()
 
             attn_scores_img = torch.matmul(q, k_img.transpose(-2, -1)) / (q.shape[-1] ** 0.5)
             attn_map_img = F.softmax(attn_scores_img, dim=-1) # [1, T H W, 257]
-            # attn_map_img = attn_scores_img
 
             attn_map = torch.cat([attn_map_img, attn_map_text], dim=-1) 
-
             x = x + y
-        return self.o(x), attn_map if self.has_image_input else None, y if self.has_image_input else None
+        return self.o(x), attn_map if self.has_image_input else None, diff if self.has_image_input else None
 
 
 class GateModule(nn.Module):
@@ -250,7 +247,7 @@ class DiTBlock(nn.Module):
         x = x + a
         input_x = modulate(self.norm2(x), shift_mlp, scale_mlp)
         x = self.gate(x, gate_mlp, self.ffn(input_x))
-        return x, attn_map, diff
+        return x, attn_map, diff, self_attn_loss
 
 
 class MLP(torch.nn.Module):

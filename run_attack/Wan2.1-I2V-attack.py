@@ -3,13 +3,12 @@ import sys
 diffsynth_path = "/workspace/Wan-I2V-Attack"
 sys.path.append(diffsynth_path)
 from diffsynth.models.model_manager import ModelManager
-from diffsynth.pipelines.wan_video import WanVideoPipeline, prompt_clip_attn_loss, model_fn_wan_video
-from diffsynth.utils import crop_and_resize, register_vae_hooks, setup_pipe_modules, plot_loss_curve, save_adv_result
+from diffsynth.pipelines.wan_video import WanVideoPipeline, prompt_clip_attn_loss
+from diffsynth.utils import setup_pipe_modules, plot_loss_curve, save_adv_result
 
 from PIL import Image
 from tqdm import tqdm
 
-import copy
 import random
 import yaml
 import os
@@ -79,7 +78,8 @@ def run_attack(pipe, image, h, w, num_frames, prompt_emb, image_emb_src, image_e
         L_enc_1 = torch.nn.functional.mse_loss(image_emb_adv["y"][:, 4:, :], image_emb_tgt["y"][:, 4:, :])
 
 
-        pipe.scheduler.set_timesteps(num_inference_steps=25, denoising_strength=1.0, shift=0.0)
+
+        pipe.scheduler.set_timesteps(num_inference_steps=25, denoising_strength=1.0, shift=5.0)
         idx = random.randrange(len(pipe.scheduler.timesteps))
 
 
@@ -93,7 +93,7 @@ def run_attack(pipe, image, h, w, num_frames, prompt_emb, image_emb_src, image_e
             **prompt_emb, **image_emb_adv, **extra_input
         )
 
-        L = attn_loss 
+        L = 100 * attn_loss + 100 * L_enc_1
         print(f"Step {step+1}/{num_steps}, Loss: {L.item():.6f}")
         loss_history.append(L.item())
         L.backward()
@@ -136,7 +136,6 @@ def main():
         'latents_list': 'cache/latents_list.pt'
     }
 
-    # import pdb; pdb.set_trace()
     if all(os.path.exists(f) for f in cache_files.values()):
         print("Loading cached data...")
         prompt_emb = torch.load(cache_files['prompt_emb'])
