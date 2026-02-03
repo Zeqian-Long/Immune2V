@@ -142,12 +142,14 @@ class SelfAttention(nn.Module):
         k = rope_apply(k, freqs, self.num_heads)
         x = self.attn(q, k, v)
 
-        # TODO: Check the vulnerability here!
+        
 
-        # Self attention loss
+        # --------------------------- Attention Map ---------------------------------------
         attn_scores = torch.matmul(q, k.transpose(-2, -1)) / (q.shape[-1] ** 0.5)
-        self_attn_map = torch.softmax(attn_scores, dim=-1)
+        self_attn_map = torch.softmax(attn_scores, dim=-1) # [1, T H W, T H W]
+        # ---------------------------------------------------------------------------------
 
+        # TODO: Check the vulnerability here!
         self_attn_loss = torch.norm(x[0, :1560, :])
         # N = self_attn_map.size(-1)
         # uniform = torch.full_like(self_attn_map, 1.0 / N) 
@@ -178,7 +180,7 @@ class CrossAttention(nn.Module):
             
         self.attn = AttentionModule(self.num_heads)
 
-    def forward(self, x: torch.Tensor, y: torch.Tensor):
+    def forward(self, x: torch.Tensor, y: torch.Tensor, info):
         if self.has_image_input:
             img = y[:, :257]
             ctx = y[:, 257:]
@@ -188,26 +190,47 @@ class CrossAttention(nn.Module):
         k = self.norm_k(self.k(ctx)) # [1, 512, 5120]
         v = self.v(ctx)
         x = self.attn(q, k, v) # [1, T H W, 5120]
-
+        
+        # -------------------------- Attention Map ---------------------------------------
         attn_scores_text = torch.matmul(q, k.transpose(-2, -1)) / (q.shape[-1] ** 0.5)
         attn_map_text = F.softmax(attn_scores_text, dim=-1) # [1, 6240, 512]
-
+        # --------------------------------------------------------------------------------
 
         if self.has_image_input:
             k_img = self.norm_k_img(self.k_img(img)) # [1, 257, 5120]
             v_img = self.v_img(img)
-            y = flash_attention(q, k_img, v_img, num_heads=self.num_heads)
+            y = flash_attention(q, k_img, v_img, num_heads=self.num_heads) # [1, T H W, 5120]
 
-
-            cos = F.cosine_similarity(x[:, :], y[:, :], dim=-1)  # [B, N]
-            diff = 1 - cos.mean()
-
+            # -------------------------- Attention Map ---------------------------------------
             attn_scores_img = torch.matmul(q, k_img.transpose(-2, -1)) / (q.shape[-1] ** 0.5)
             attn_map_img = F.softmax(attn_scores_img, dim=-1) # [1, T H W, 257]
-
             attn_map = torch.cat([attn_map_img, attn_map_text], dim=-1) 
+            # --------------------------------------------------------------------------------
+
+            cos = F.cosine_similarity(x[:, :], y[:, :], dim=-1)  # [1, T H W]
+            diff = 1 - cos.mean()
+
+            # x_norm = F.normalize(x, dim=-1)
+            # y_norm = F.normalize(y, dim=-1)
+            # diff = (torch.norm(x_norm - 3 * y_norm, dim=-1) / 2.0).mean()
+            # print(diff)
+            
+            # 1 + lambda
             x = x + y
-        return self.o(x), attn_map if self.has_image_input else None, diff if self.has_image_input else None
+
+            if info is not None and info['id'] <= 6:
+                feature_name = str(info['t']) + '_' + str(info['id']) + '_' + 'Cross'
+
+                if not info['attack']:
+                    info['feature'][feature_name] = x.cpu()
+                else: 
+                    diff = 1 - F.cosine_similarity(x, info['feature'][feature_name].to(x.device), dim=-1).mean()
+                    # print(diff)
+                    # import pdb; pdb.set_trace()
+
+
+
+        return self.o(x), attn_map if self.has_image_input else None, diff if self.has_image_input else None, info
 
 
 class GateModule(nn.Module):
@@ -235,19 +258,24 @@ class DiTBlock(nn.Module):
         self.modulation = nn.Parameter(torch.randn(1, 6, dim) / dim**0.5)
         self.gate = GateModule()
 
-    def forward(self, x, context, t_mod, freqs):
+    def forward(self, x, context, t_mod, freqs, info):
         # msa: multi-head self-attention  mlp: multi-layer perceptron
         shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = (
             self.modulation.to(dtype=t_mod.dtype, device=t_mod.device) + t_mod).chunk(6, dim=1)
         input_x = modulate(self.norm1(x), shift_msa, scale_msa)
-        self_attn_out, self_attn_loss = self.self_attn(input_x, freqs)
 
+        # TODO: Check the OUTPUT here!
+        # self attention
+        self_attn_out, self_attn_loss = self.self_attn(input_x, freqs)
         x = self.gate(x, gate_msa, self_attn_out)
-        a, attn_map, diff = self.cross_attn(self.norm3(x), context)
+
+        # cross attention
+        a, attn_map, diff, info = self.cross_attn(self.norm3(x), context, info)
         x = x + a
         input_x = modulate(self.norm2(x), shift_mlp, scale_mlp)
         x = self.gate(x, gate_mlp, self.ffn(input_x))
-        return x, attn_map, diff, self_attn_loss
+
+        return x, attn_map, diff, self_attn_loss, info
 
 
 class MLP(torch.nn.Module):

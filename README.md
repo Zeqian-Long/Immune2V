@@ -36,6 +36,7 @@ Or modify the local-dir as needed.
 ## Command Line
 You can run the following scripts in the terminal to attack your own image. 
 ```
+python ./run_attack/preprocess_data.py
 python ./run_attack/Wan2.1-I2V-attack.py
 ```
 

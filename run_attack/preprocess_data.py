@@ -72,7 +72,7 @@ def prepare_data(pipe, image, target_image, prompt, h=480, w=832, num_frames=1):
 
 
 
-def obtain_latent_sequence(pipe, h, w, num_frames, prompt_emb, image_emb_src, num_inference_steps=25):
+def obtain_latent_sequence(pipe, h, w, num_frames, prompt_emb, image_emb_src, num_inference_steps=25, info=None):
 
     noise = pipe.generate_noise(
         (1, 16, (num_frames - 1) // 4 + 1, h//8, w//8), 
@@ -92,14 +92,17 @@ def obtain_latent_sequence(pipe, h, w, num_frames, prompt_emb, image_emb_src, nu
         for progress_id, timestep in enumerate(tqdm(pipe.scheduler.timesteps)):
             latents_list.append(latents.detach().cpu())
             timestep = timestep.unsqueeze(0).to(dtype=pipe.torch_dtype, device=pipe.device)
-            noise_pred = model_fn_wan_video(
+
+            info['t'] = timestep.item()
+
+            noise_pred, info = model_fn_wan_video(
                 pipe.dit, latents, timestep=timestep,
-                **prompt_emb, **image_emb_src, **extra_input
+                **prompt_emb, **image_emb_src, **extra_input, info=info
             )
             
             latents = pipe.scheduler.step(noise_pred, pipe.scheduler.timesteps[progress_id], latents)
 
-    return latents_list
+    return latents_list, info
 
 
 def main():
@@ -116,18 +119,27 @@ def main():
 
     image = Image.open(cfg["data"]["image_path"]).resize((w, h))
     target_image = Image.open(cfg["data"]["target_image_path"]).resize((w, h))
-    prompt = cfg["prompt"]["text"]
+    prompt = cfg["prompt"]["target"]
 
     prompt_emb, image_emb_src, image_emb_tgt, saved_features, target_features = prepare_data(pipe, image, target_image, prompt, 
                                                                                                 h=h, w=w, num_frames=num_frames)
 
-    latents_list = obtain_latent_sequence(pipe, h, w, num_frames, prompt_emb, image_emb_src, num_inference_steps=num_inference_steps)
+
+    info = {}
+    info['attack'] = False 
+    info['feature'] = {}
+
+    latents_list, info = obtain_latent_sequence(pipe, h, w, num_frames, prompt_emb, image_emb_src, num_inference_steps=num_inference_steps, info=info)
+
+    with torch.no_grad():
+        prompt_emb = pipe.encode_prompt(prompt=cfg["prompt"]["source"], positive=True)  
 
     os.makedirs("cache", exist_ok=True)
     torch.save(prompt_emb, "cache/prompt_emb.pt")
     torch.save(image_emb_src, "cache/image_emb_src.pt")
     torch.save(image_emb_tgt, "cache/image_emb_tgt.pt")
     torch.save(latents_list, "cache/latents_list.pt")
+    torch.save(info, "cache/info.pt")
     print("Saved to cache/")
                                                                                           
 

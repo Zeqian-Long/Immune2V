@@ -290,24 +290,30 @@ class WanVideoPipeline(BasePipeline):
             # [1, 1, 1, h//8, w//8]
         else:
             mask = None
-
             
         # Extra input
         extra_input = self.prepare_extra_input(latents)
-        
-        
         # Unified Sequence Parallel
         usp_kwargs = self.prepare_unified_sequence_parallel()
+
+
+        # Store attack target
+        info = None
+        # info['attack'] = False 
+        # info['feature'] = {}
 
         # Denoise
         self.load_models_to_device(["dit"])
         for progress_id, timestep in enumerate(progress_bar_cmd(self.scheduler.timesteps)):
             timestep = timestep.unsqueeze(0).to(dtype=self.torch_dtype, device=self.device)
 
+            if info is not None:
+                info['t'] = timestep.item()
+
             # Inference
-            noise_pred_posi = model_fn_wan_video(self.dit, latents, timestep=timestep, mask=mask, **prompt_emb_posi, **image_emb, **extra_input, **usp_kwargs)
+            noise_pred_posi, info = model_fn_wan_video(self.dit, latents, timestep=timestep, mask=mask, **prompt_emb_posi, **image_emb, **extra_input, **usp_kwargs, info=info)
             if cfg_scale != 1.0:
-                noise_pred_nega = model_fn_wan_video(self.dit, latents, timestep=timestep, mask=mask, **prompt_emb_nega, **image_emb, **extra_input, **usp_kwargs)
+                noise_pred_nega, _ = model_fn_wan_video(self.dit, latents, timestep=timestep, mask=mask, **prompt_emb_nega, **image_emb, **extra_input, **usp_kwargs, info=None)
                 noise_pred = noise_pred_nega + cfg_scale * (noise_pred_posi - noise_pred_nega)
             else:
                 noise_pred = noise_pred_posi
@@ -321,8 +327,10 @@ class WanVideoPipeline(BasePipeline):
         self.load_models_to_device([])
         frames = self.tensor2video(frames[0])
 
-        return frames
+        if info is not None and not info['attack']:
+            torch.save(info, "info.pt")
 
+        return frames
 
 
 
@@ -335,6 +343,7 @@ def model_fn_wan_video(
     y: Optional[torch.Tensor] = None,
     use_unified_sequence_parallel: bool = False,
     mask: Optional[torch.Tensor] = None,
+    info: Optional[dict] = None,
     **kwargs,
 ):
     if use_unified_sequence_parallel:
@@ -374,7 +383,10 @@ def model_fn_wan_video(
         Diff = 0
         for block_id, block in enumerate(dit.blocks):
 
-            x, attn_map, diff, self_attn_loss = block(x, context, t_mod, freqs)
+            if info is not None:
+                info['id'] = block_id
+
+            x, attn_map, diff, self_attn_loss, info = block(x, context, t_mod, freqs, info)
 
             attn_maps.append(attn_map)
             B, N_q, N_k = attn_map.shape   # [1, 6240, 769]
@@ -409,7 +421,7 @@ def model_fn_wan_video(
         if dist.is_initialized() and dist.get_world_size() > 1:
             x = get_sp_group().all_gather(x, dim=1)
     x = dit.unpatchify(x, (f, h, w))
-    return x
+    return x, info
 
 
 def prompt_clip_attn_loss(
@@ -419,6 +431,7 @@ def prompt_clip_attn_loss(
     context: torch.Tensor,
     clip_feature: torch.Tensor = None,
     y: torch.Tensor = None,
+    info: Optional[dict] = None,
     **kwargs,
 ):
 
@@ -439,7 +452,8 @@ def prompt_clip_attn_loss(
     
     cross_attn_loss = 0
     for block_id, block in enumerate(dit.blocks):
-        x, attn_map, diff, self_attn_loss = block(x, context, t_mod, freqs)
+        info['id'] = block_id
+        x, attn_map, diff, self_attn_loss, info = block(x, context, t_mod, freqs, info)
         
         if block_id <= 6:
             cross_attn_loss += diff

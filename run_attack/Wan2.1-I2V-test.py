@@ -38,29 +38,33 @@ pipe = WanVideoPipeline.from_model_manager(model_manager, torch_dtype=torch.bflo
 h = 480
 w = 832
 
-# h = 224
-# w = 224
-
-image = Image.open("I_adv_final_hike.jpg")
+# image = Image.open("I_adv_final_hike.jpg")
 
 # image = Image.open("data/image/swan.jpg")
 
 # image = Image.open("data/image/man.jpg")
 
-target_image = Image.open("data/image/MIST_Repeated.png")
+# image = Image.open("data/image/rhino.jpg")
+
+image = Image.open("data/image/boat.jpg")
 
 image = image.resize((w, h))
+
+
+# target_image = Image.open("data/image/MIST_Repeated.png")
+# target_image = target_image.resize((w, h))
+
+
 
 # pipe.enable_vram_management(num_persistent_param_in_dit=6*10**9) # You can set `num_persistent_param_in_dit` to a small number to reduce VRAM required.
 pipe = setup_pipe_modules(pipe)
 
 video = pipe(
-    prompt="a black swan",
-    negative_prompt="色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走",
-    input_image=image,
+    prompt="",
+    input_image=image_noisy,
     num_inference_steps=25, height=h, width=w,
-    seed=0, tiled=True, num_frames=17, target_image=None,
+    seed=0, tiled=True, num_frames=17, target_image=None, cfg_scale=5.0,
 )
-save_video(video, "swan_attacked.mp4", fps=15, quality=5)
+save_video(video, "clean_random.mp4", fps=15, quality=5)
 
 

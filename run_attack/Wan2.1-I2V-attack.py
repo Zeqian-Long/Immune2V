@@ -56,7 +56,7 @@ def init_adv_image(I, epsilon=0.03, value_range=(-1.0, 1.0), device=None):
 
 
 
-def run_attack(pipe, image, h, w, num_frames, prompt_emb, image_emb_src, image_emb_tgt, latents_list, num_steps=400, epsilon=20.0 / 255 * 2, step_size=2.0 / 255 * 2):
+def run_attack(pipe, image, h, w, num_frames, prompt_emb, image_emb_src, image_emb_tgt, latents_list, num_steps=400, epsilon=20.0 / 255 * 2, step_size=2.0 / 255 * 2, info=None):
 
     tiler_kwargs = {"tiled": False, "tile_size": (h / 16, w / 16), "tile_stride": (h / 32, w / 32)}
 
@@ -78,22 +78,25 @@ def run_attack(pipe, image, h, w, num_frames, prompt_emb, image_emb_src, image_e
         L_enc_1 = torch.nn.functional.mse_loss(image_emb_adv["y"][:, 4:, :], image_emb_tgt["y"][:, 4:, :])
 
 
-
         pipe.scheduler.set_timesteps(num_inference_steps=25, denoising_strength=1.0, shift=5.0)
         idx = random.randrange(len(pipe.scheduler.timesteps))
 
 
         adv_latents = latents_list[idx].to(dtype=pipe.torch_dtype, device=pipe.device)
         timestep = pipe.scheduler.timesteps[idx].unsqueeze(0).to(dtype=pipe.torch_dtype, device=pipe.device)
+
+        if info is not None:
+            info['t'] = timestep.item()
+
         extra_input = pipe.prepare_extra_input(adv_latents)
 
         pipe.load_models_to_device(["dit"])
         attn_loss = prompt_clip_attn_loss(
             pipe.dit, adv_latents, timestep=timestep,
-            **prompt_emb, **image_emb_adv, **extra_input
+            **prompt_emb, **image_emb_adv, **extra_input, info=info
         )
 
-        L = 100 * attn_loss + 100 * L_enc_1
+        L = attn_loss
         print(f"Step {step+1}/{num_steps}, Loss: {L.item():.6f}")
         loss_history.append(L.item())
         L.backward()
@@ -126,14 +129,14 @@ def main():
 
     image = Image.open(cfg["data"]["image_path"]).resize((w, h))
     target_image = Image.open(cfg["data"]["target_image_path"]).resize((w, h))
-    prompt = cfg["prompt"]["text"]
 
 
     cache_files = {
         'prompt_emb': 'cache/prompt_emb.pt',
         'image_emb_src': 'cache/image_emb_src.pt',
         'image_emb_tgt': 'cache/image_emb_tgt.pt',
-        'latents_list': 'cache/latents_list.pt'
+        'latents_list': 'cache/latents_list.pt',
+        'info': 'cache/info.pt',
     }
 
     if all(os.path.exists(f) for f in cache_files.values()):
@@ -142,6 +145,7 @@ def main():
         image_emb_src = torch.load(cache_files['image_emb_src'])
         image_emb_tgt = torch.load(cache_files['image_emb_tgt'])
         latents_list = torch.load(cache_files['latents_list'])
+        info = torch.load(cache_files['info'])
         print("Loaded successfully!")
     else:
         raise FileNotFoundError(
@@ -152,9 +156,11 @@ def main():
     num_steps = cfg["attack"]["num_steps"]
     epsilon = eval(cfg["attack"]["epsilon"])
     step_size = epsilon / 10
+
+    info['attack'] = True
                                          
     run_attack(pipe, image, h, w, num_frames, prompt_emb, image_emb_src, image_emb_tgt, latents_list,
-                num_steps=num_steps, epsilon=epsilon, step_size=step_size)
+                num_steps=num_steps, epsilon=epsilon, step_size=step_size, info=info)
 
 
 if __name__ == "__main__":
