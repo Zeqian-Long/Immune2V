@@ -162,20 +162,14 @@ class WanVideoPipeline(BasePipeline):
         return {"context": prompt_emb}
     
     
-    def encode_image(self, image, num_frames, height, width, tiled=False, tile_size=(34, 34), tile_stride=(18, 16), target_image=None):
+    def encode_image(self, image, num_frames, height, width, tiled=False, tile_size=(34, 34), tile_stride=(18, 16)):
         if isinstance(image, torch.Tensor):
             image = image.to(self.device)
         else:
             image = self.preprocess_image(image.resize((width, height))).to(self.device)
 
-        # clip_context = self.image_encoder.encode_image([image])
-
-        # TODO: Test code, to be deleted
-        if target_image is not None:
-            target_image = self.preprocess_image(target_image.resize((width, height))).to(self.device)
-            clip_context = self.image_encoder.encode_image([target_image])
-        else:
-            clip_context = self.image_encoder.encode_image([image])
+        # clip
+        clip_context = self.image_encoder.encode_image([image])
 
         msk = torch.ones(1, num_frames, height//8, width//8, device=self.device)
         msk[:, 1:] = 0
@@ -183,6 +177,7 @@ class WanVideoPipeline(BasePipeline):
         msk = msk.view(1, msk.shape[1] // 4, 4, height//8, width//8)
         msk = msk.transpose(1, 2)[0]
         
+        # vae
         vae_input = torch.concat([image.transpose(0, 1), torch.zeros(3, num_frames-1, height, width).to(image.device)], dim=1)
         y = self.vae.encode([vae_input.to(dtype=self.torch_dtype, device=self.device)], device=self.device, tiled=tiled, tile_size=tile_size, tile_stride=tile_stride)[0]
         y = y.to(dtype=self.torch_dtype, device=self.device)
@@ -224,9 +219,7 @@ class WanVideoPipeline(BasePipeline):
         prompt,
         negative_prompt="",
         input_image=None,
-        target_image=None,
         input_video=None,
-        mask=None,
         denoising_strength=1.0,
         seed=None,
         rand_device="cpu",
@@ -275,32 +268,17 @@ class WanVideoPipeline(BasePipeline):
         # Encode image
         if input_image is not None and self.image_encoder is not None:
             self.load_models_to_device(["image_encoder", "vae"])
-            image_emb = self.encode_image(input_image, num_frames, height, width, target_image = target_image)
-
+            image_emb = self.encode_image(input_image, num_frames, height, width)
         else:
             image_emb = {}
         
-        # Encode mask
-        if mask is not None:
-            mask = mask.convert("L")
-            mask_small = mask.resize((width // 8, height // 8), Image.NEAREST)
-            mask_tensor = torch.from_numpy(np.array(mask_small)).float() / 255.0
-            mask_tensor = (mask_tensor > 0.5).float().unsqueeze(0).unsqueeze(0)
-            mask  = mask_tensor.unsqueeze(2).to(self.device)
-            # [1, 1, 1, h//8, w//8]
-        else:
-            mask = None
-            
         # Extra input
         extra_input = self.prepare_extra_input(latents)
         # Unified Sequence Parallel
         usp_kwargs = self.prepare_unified_sequence_parallel()
 
-
-        # Store attack target
+        # Store attack target, modify if needed
         info = None
-        # info['attack'] = False 
-        # info['feature'] = {}
 
         # Denoise
         self.load_models_to_device(["dit"])
@@ -311,9 +289,9 @@ class WanVideoPipeline(BasePipeline):
                 info['t'] = timestep.item()
 
             # Inference
-            noise_pred_posi, info = model_fn_wan_video(self.dit, latents, timestep=timestep, mask=mask, **prompt_emb_posi, **image_emb, **extra_input, **usp_kwargs, info=info)
+            noise_pred_posi, info = model_fn_wan_video(self.dit, latents, timestep=timestep, **prompt_emb_posi, **image_emb, **extra_input, **usp_kwargs, info=info)
             if cfg_scale != 1.0:
-                noise_pred_nega, _ = model_fn_wan_video(self.dit, latents, timestep=timestep, mask=mask, **prompt_emb_nega, **image_emb, **extra_input, **usp_kwargs, info=None)
+                noise_pred_nega, _ = model_fn_wan_video(self.dit, latents, timestep=timestep, **prompt_emb_nega, **image_emb, **extra_input, **usp_kwargs, info=None)
                 noise_pred = noise_pred_nega + cfg_scale * (noise_pred_posi - noise_pred_nega)
             else:
                 noise_pred = noise_pred_posi
@@ -342,7 +320,6 @@ def model_fn_wan_video(
     clip_feature: Optional[torch.Tensor] = None,
     y: Optional[torch.Tensor] = None,
     use_unified_sequence_parallel: bool = False,
-    mask: Optional[torch.Tensor] = None,
     info: Optional[dict] = None,
     **kwargs,
 ):
@@ -359,7 +336,6 @@ def model_fn_wan_video(
     if dit.has_image_input:
         x = torch.cat([x, y], dim=1)  # (b, c_x + c_y, f, h, w), c = 20 + 16 (vae_output)
         clip_embdding = dit.img_emb(clip_feature)
-        # clip_embdding = torch.ones_like(clip_embdding)
         context = torch.cat([clip_embdding, context], dim=1) # (condition) [257, 5120] + [512, 5120] -> [769, 5120]
     
     x, (f, h, w) = dit.patchify(x)
@@ -378,8 +354,8 @@ def model_fn_wan_video(
             x = torch.chunk(x, get_sequence_parallel_world_size(), dim=1)[get_sequence_parallel_rank()]
 
     else:
-        save_dir = "cross_attn"
-        os.makedirs(save_dir, exist_ok=True)
+        # save_dir = "cross_attn"
+        # os.makedirs(save_dir, exist_ok=True)
         Diff = 0
         for block_id, block in enumerate(dit.blocks):
 
@@ -388,9 +364,9 @@ def model_fn_wan_video(
 
             x, attn_map, diff, self_attn_loss, info = block(x, context, t_mod, freqs, info)
 
-            attn_maps.append(attn_map)
-            B, N_q, N_k = attn_map.shape   # [1, 6240, 769]
-            attn_map_3d = attn_map.view(B, f, h, w, N_k) # [1, F, 30, 52, 769]
+            # attn_maps.append(attn_map)
+            # B, N_q, N_k = attn_map.shape   # [1, 6240, 769]
+            # attn_map_3d = attn_map.view(B, f, h, w, N_k) # [1, F, 30, 52, 769]
 
 
             # if block_id <= 6:
@@ -452,16 +428,19 @@ def prompt_clip_attn_loss(
     
     cross_attn_loss = 0
     for block_id, block in enumerate(dit.blocks):
-        info['id'] = block_id
-        x, attn_map, diff, self_attn_loss, info = block(x, context, t_mod, freqs, info)
-        
-        if block_id <= 6:
-            cross_attn_loss += diff
-            # cross_attn_loss += self_attn_loss
-            if block_id == 6:
-                return cross_attn_loss 
-        
+        if info is not None:
+            info['id'] = block_id
 
+        x, attn_map, diff, self_attn_loss, info = block(x, context, t_mod, freqs, info)
+
+        # if block_id <= 5:
+        #     cross_attn_loss += self_attn_loss
+        #     # cross_attn_loss += self_attn_loss
+        #     if block_id == 5:
+        #         return cross_attn_loss 
+        if block_id == 5:
+            return x 
+        
         # DEBUG: Old Implementation
         # if block_id == 0:
         #     for anchor_idx in range(0, 1):  
@@ -475,4 +454,4 @@ def prompt_clip_attn_loss(
         #     return cross_attn_loss
 
     return torch.tensor(0.0, device=x.device)
-
+    

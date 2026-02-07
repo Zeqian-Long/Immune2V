@@ -5,11 +5,8 @@ sys.path.append(diffsynth_path)
 from diffsynth.models.model_manager import ModelManager
 from diffsynth.pipelines.wan_video import WanVideoPipeline, model_fn_wan_video
 from diffsynth.utils import register_vae_hooks, setup_pipe_modules
-
 from PIL import Image
 from tqdm import tqdm
-
-import copy
 import yaml
 import os
 
@@ -41,34 +38,29 @@ def load_all_models():
     return pipe
 
 
-def prepare_data(pipe, image, target_image, prompt, h=480, w=832, num_frames=1):
+def prepare_data(pipe, image, target_image, prompt_src, prompt_tgt, h=480, w=832, num_frames=1):
+    
     # Encode Prompt
     pipe.load_models_to_device(["text_encoder"])
     with torch.no_grad():
-        prompt_emb_posi = pipe.encode_prompt(prompt=prompt, positive=True)      # [1, 512, 4096]
+        prompt_emb_src = pipe.encode_prompt(prompt=prompt_src, positive=True)      # [1, 512, 4096]
+        prompt_emb_tgt = pipe.encode_prompt(prompt=prompt_tgt, positive=True)   
 
-    # Modify if needed
+    # Modify if needed, usually tiled = False
     tiler_kwargs = {"tiled": False, "tile_size": (h / 16, w / 16), "tile_stride": (h / 32, w / 32)}
 
     # Encode Image
     pipe.load_models_to_device(["image_encoder", "vae"])
     with torch.no_grad():
-        image_emb_src = pipe.encode_image(
-            image, num_frames=num_frames, height=h, width=w, **tiler_kwargs
-        )   # clip: [1, 1 + 256, 1280], y: [1, C (4+16), 1+T/4, 60, 104]
+        image_emb_src = pipe.encode_image(image, num_frames=num_frames, height=h, width=w, **tiler_kwargs)   # clip: [1, 1 + 256, 1280], y: [1, C (4+16), 1+T/4, 60, 104]
 
-    # Register Hooks at Multiple Resolutions
+    # TODO: Register Hooks at Multiple Resolutions
     saved_features = register_vae_hooks(pipe)
 
     with torch.no_grad():
-        image_emb_tgt = pipe.encode_image(
-            target_image, num_frames=num_frames, height=h, width=w, **tiler_kwargs
-        )
+        image_emb_tgt = pipe.encode_image(target_image, num_frames=num_frames, height=h, width=w, **tiler_kwargs)
 
-    target_features = copy.deepcopy(saved_features)
-    saved_features = {}
-
-    return prompt_emb_posi, image_emb_src, image_emb_tgt, saved_features, target_features
+    return prompt_emb_src, prompt_emb_tgt, image_emb_src, image_emb_tgt, saved_features
 
 
 
@@ -87,6 +79,7 @@ def obtain_latent_sequence(pipe, h, w, num_frames, prompt_emb, image_emb_src, nu
 
     pipe.scheduler.set_timesteps(num_inference_steps=num_inference_steps, denoising_strength=1.0, shift=5.0)
     pipe.load_models_to_device(["dit"])
+
 
     with torch.no_grad():
         for progress_id, timestep in enumerate(tqdm(pipe.scheduler.timesteps)):
@@ -119,29 +112,26 @@ def main():
 
     image = Image.open(cfg["data"]["image_path"]).resize((w, h))
     target_image = Image.open(cfg["data"]["target_image_path"]).resize((w, h))
-    prompt = cfg["prompt"]["target"]
+    prompt_src = cfg["prompt"]["source"]
+    prompt_tgt = cfg["prompt"]["target"]
 
-    prompt_emb, image_emb_src, image_emb_tgt, saved_features, target_features = prepare_data(pipe, image, target_image, prompt, 
-                                                                                                h=h, w=w, num_frames=num_frames)
-
+    prompt_emb_src, prompt_emb_tgt, image_emb_src, image_emb_tgt, saved_features = prepare_data(pipe, image, target_image, prompt_src, prompt_tgt, h=h, w=w, num_frames=num_frames)
 
     info = {}
     info['attack'] = False 
     info['feature'] = {}
 
-    latents_list, info = obtain_latent_sequence(pipe, h, w, num_frames, prompt_emb, image_emb_src, num_inference_steps=num_inference_steps, info=info)
-
-    with torch.no_grad():
-        prompt_emb = pipe.encode_prompt(prompt=cfg["prompt"]["source"], positive=True)  
+    latents_list, info = obtain_latent_sequence(pipe, h, w, num_frames, prompt_emb_src, image_emb_src, num_inference_steps=num_inference_steps, info=info)
 
     os.makedirs("cache", exist_ok=True)
-    torch.save(prompt_emb, "cache/prompt_emb.pt")
+    torch.save(prompt_emb_src, "cache/prompt_emb_src.pt")
+    torch.save(prompt_emb_tgt, "cache/prompt_emb_tgt.pt")
     torch.save(image_emb_src, "cache/image_emb_src.pt")
     torch.save(image_emb_tgt, "cache/image_emb_tgt.pt")
     torch.save(latents_list, "cache/latents_list.pt")
     torch.save(info, "cache/info.pt")
     print("Saved to cache/")
-                                                                                          
+
 
 if __name__ == "__main__":
     main()

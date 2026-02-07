@@ -141,16 +141,29 @@ class SelfAttention(nn.Module):
         q = rope_apply(q, freqs, self.num_heads)
         k = rope_apply(k, freqs, self.num_heads)
         x = self.attn(q, k, v)
-
         
 
         # --------------------------- Attention Map ---------------------------------------
-        attn_scores = torch.matmul(q, k.transpose(-2, -1)) / (q.shape[-1] ** 0.5)
-        self_attn_map = torch.softmax(attn_scores, dim=-1) # [1, T H W, T H W]
+        # attn_scores = torch.matmul(q, k.transpose(-2, -1)) / (q.shape[-1] ** 0.5)
+        # self_attn_map = torch.softmax(attn_scores, dim=-1) # [1, T H W, T H W]
         # ---------------------------------------------------------------------------------
 
         # TODO: Check the vulnerability here!
-        self_attn_loss = torch.norm(x[0, :1560, :])
+        self_attn_loss = None
+
+        # A = self_attn_map + 1e-8     
+        # entropy = -(A * A.log()).sum(dim=-1) 
+        # self_attn_loss = -entropy.mean() 
+
+        # B, N, _ = A.shape
+        # shuffled_indices = torch.randperm(N, device=A.device)
+        # A_shuffled = A[:, shuffled_indices, :]
+        # self_attn_loss = F.kl_div(
+        #     A.log(), 
+        #     A_shuffled, 
+        #     reduction='batchmean'
+        # )
+        
         # N = self_attn_map.size(-1)
         # uniform = torch.full_like(self_attn_map, 1.0 / N) 
         # l2_per_row = torch.sqrt(((self_attn_map - uniform) ** 2).sum(dim=-1))  # [B, N]
@@ -192,8 +205,8 @@ class CrossAttention(nn.Module):
         x = self.attn(q, k, v) # [1, T H W, 5120]
         
         # -------------------------- Attention Map ---------------------------------------
-        attn_scores_text = torch.matmul(q, k.transpose(-2, -1)) / (q.shape[-1] ** 0.5)
-        attn_map_text = F.softmax(attn_scores_text, dim=-1) # [1, 6240, 512]
+        # attn_scores_text = torch.matmul(q, k.transpose(-2, -1)) / (q.shape[-1] ** 0.5)
+        # attn_map_text = F.softmax(attn_scores_text, dim=-1) # [1, 6240, 512]
         # --------------------------------------------------------------------------------
 
         if self.has_image_input:
@@ -202,33 +215,30 @@ class CrossAttention(nn.Module):
             y = flash_attention(q, k_img, v_img, num_heads=self.num_heads) # [1, T H W, 5120]
 
             # -------------------------- Attention Map ---------------------------------------
-            attn_scores_img = torch.matmul(q, k_img.transpose(-2, -1)) / (q.shape[-1] ** 0.5)
-            attn_map_img = F.softmax(attn_scores_img, dim=-1) # [1, T H W, 257]
-            attn_map = torch.cat([attn_map_img, attn_map_text], dim=-1) 
+            # attn_scores_img = torch.matmul(q, k_img.transpose(-2, -1)) / (q.shape[-1] ** 0.5)
+            # attn_map_img = F.softmax(attn_scores_img, dim=-1) # [1, T H W, 257]
+            # attn_map = torch.cat([attn_map_img, attn_map_text], dim=-1) 
+            attn_map = None
             # --------------------------------------------------------------------------------
 
-            cos = F.cosine_similarity(x[:, :], y[:, :], dim=-1)  # [1, T H W]
-            diff = 1 - cos.mean()
-
+            # cos = F.cosine_similarity(x[:, :], y[:, :], dim=-1)  # [1, T H W]
+            # diff = 1 - cos.mean()
+            diff = None
             # x_norm = F.normalize(x, dim=-1)
             # y_norm = F.normalize(y, dim=-1)
             # diff = (torch.norm(x_norm - 3 * y_norm, dim=-1) / 2.0).mean()
             # print(diff)
-            
-            # 1 + lambda
+
             x = x + y
 
-            if info is not None and info['id'] <= 6:
-                feature_name = str(info['t']) + '_' + str(info['id']) + '_' + 'Cross'
-
-                if not info['attack']:
-                    info['feature'][feature_name] = x.cpu()
-                else: 
-                    diff = 1 - F.cosine_similarity(x, info['feature'][feature_name].to(x.device), dim=-1).mean()
+            # if info is not None and info['id'] <= 6:
+            #     feature_name = str(info['t']) + '_' + str(info['id']) + '_' + 'Cross'
+            #     if not info['attack']:
+            #         info['feature'][feature_name] = x.cpu()
+            #     else: 
+            #         diff = 1 - F.cosine_similarity(x, info['feature'][feature_name].to(x.device), dim=-1).mean()
                     # print(diff)
                     # import pdb; pdb.set_trace()
-
-
 
         return self.o(x), attn_map if self.has_image_input else None, diff if self.has_image_input else None, info
 
@@ -270,8 +280,8 @@ class DiTBlock(nn.Module):
         x = self.gate(x, gate_msa, self_attn_out)
 
         # cross attention
-        a, attn_map, diff, info = self.cross_attn(self.norm3(x), context, info)
-        x = x + a
+        cross_attn_out, attn_map, diff, info = self.cross_attn(self.norm3(x), context, info)
+        x = x + cross_attn_out
         input_x = modulate(self.norm2(x), shift_mlp, scale_mlp)
         x = self.gate(x, gate_mlp, self.ffn(input_x))
 
@@ -416,7 +426,7 @@ class WanModel(torch.nn.Module):
                         use_reentrant=False,
                     )
             else:
-                x, _ = block(x, context, t_mod, freqs)
+                x, _, _, _, _ = block(x, context, t_mod, freqs, None)
 
         x = self.head(x, t)
         x = self.unpatchify(x, (f, h, w))
