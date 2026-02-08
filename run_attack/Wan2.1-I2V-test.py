@@ -39,19 +39,16 @@ h = 480
 w = 832
 
 image = Image.open("I_adv_final_hike.jpg")
-# image = Image.open("data/image/swan.jpg")
+# image = Image.open("data/image/ship.jpg")
 image = image.resize((w, h))
-
 
 # pipe.enable_vram_management(num_persistent_param_in_dit=6*10**9) # You can set `num_persistent_param_in_dit` to a small number to reduce VRAM required.
 pipe = setup_pipe_modules(pipe)
 
 video = pipe(
-    prompt="swan swimming in the river",
+    prompt="A rhino is walking in the zoo",
     input_image=image,
     num_inference_steps=25, height=h, width=w,
-    seed=0, tiled=True, num_frames=21, target_image=None, cfg_scale=1,
+    seed=0, tiled=False, num_frames=9, cfg_scale=5,
 )
 save_video(video, "clean_attacked.mp4", fps=15, quality=5)
-
-
