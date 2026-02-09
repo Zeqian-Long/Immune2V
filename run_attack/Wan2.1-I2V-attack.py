@@ -76,15 +76,23 @@ def run_attack(pipe, image, h, w, num_frames, prompt_emb_src, prompt_emb_tgt, im
         pipe.load_models_to_device(["vae", "image_encoder"])
         image_emb_adv = pipe.encode_image(I_adv, num_frames=num_frames, height=h, width=w, **tiler_kwargs)
 
+        # print(F.mse_loss(image_emb_adv["y"][0, 4:, 0], image_emb_tgt[0, :, 0]))
+        # print(F.mse_loss(image_emb_adv["y"][0, 4:, 1], image_emb_tgt[0, :, 1]))
+        # print(F.mse_loss(image_emb_adv["y"][0, 4:, 2], image_emb_tgt[0, :, 2]))
+        # print(F.mse_loss(image_emb_adv["y"][:, 4:, :], image_emb_tgt))
+
         # MSE Loss
-        # enc_loss = torch.nn.functional.mse_loss(image_emb_adv["y"][:, 4:, :], image_emb_tgt["y"][:, 4:, :])
+        # enc_loss = F.mse_loss(image_emb_adv["y"][:, 4:, :], image_emb_tgt["y"][:, 4:, :])
+        enc_loss = (F.mse_loss(image_emb_adv["y"][0, 4:, 0], image_emb_tgt[0, :, 0])
+                    + F.mse_loss(image_emb_adv["y"][0, 4:, 1], image_emb_tgt[0, :, 1])
+                    + F.mse_loss(image_emb_adv["y"][0, 4:, 2], image_emb_tgt[0, :, 2]))
 
         # Cosine Loss
-        z_adv = image_emb_adv["y"][:, 4:, :, :, :] 
-        z_tgt = image_emb_tgt["y"][:, 4:, :, :, :]
-        z_adv_v = z_adv.permute(0, 2, 3, 4, 1)     
-        z_tgt_v = z_tgt.permute(0, 2, 3, 4, 1)
-        enc_loss = 1 - F.cosine_similarity(z_adv_v, z_tgt_v, dim=-1).mean()
+        # z_adv = image_emb_adv["y"][:, 4:, :, :, :] 
+        # z_tgt = image_emb_tgt["y"][:, 4:, :, :, :]
+        # z_adv_v = z_adv.permute(0, 2, 3, 4, 1)     
+        # z_tgt_v = z_tgt.permute(0, 2, 3, 4, 1)
+        # enc_loss = 1 - F.cosine_similarity(z_adv_v, z_tgt_v, dim=-1).mean()
 
         pipe.scheduler.set_timesteps(num_inference_steps=25, denoising_strength=1.0, shift=5.0)
         idx = random.randrange(len(pipe.scheduler.timesteps))
@@ -111,7 +119,7 @@ def run_attack(pipe, image, h, w, num_frames, prompt_emb_src, prompt_emb_tgt, im
         # attn_loss = prompt_clip_attn_loss(pipe.dit, adv_latents, timestep=timestep, **prompt_emb, **image_emb_adv, **extra_input, info=info)
 
         # scale the loss if needed
-        L = 1 * attn_loss + 100 * enc_loss
+        L = 1 * attn_loss + 1 * enc_loss
 
         pbar.set_postfix(loss=f"{L.item():.4f}", t=timestep.item())
 

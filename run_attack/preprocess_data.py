@@ -58,7 +58,11 @@ def prepare_data(pipe, image, target_image, prompt_src, prompt_tgt, h=480, w=832
     saved_features = register_vae_hooks(pipe)
 
     with torch.no_grad():
-        image_emb_tgt = pipe.encode_image(target_image, num_frames=num_frames, height=h, width=w, **tiler_kwargs)
+        target_image = pipe.preprocess_image(target_image)  
+        video = target_image.unsqueeze(2).repeat(1, 1, num_frames, 1, 1).to(pipe.device, pipe.torch_dtype)
+        image_emb_tgt = pipe.encode_video(video, **tiler_kwargs)  # [1, C, 1+T/4, H/8, W/8]
+
+        # image_emb_tgt = pipe.encode_image(target_image, num_frames=num_frames, height=h, width=w, **tiler_kwargs)
 
     return prompt_emb_src, prompt_emb_tgt, image_emb_src, image_emb_tgt, saved_features
 
