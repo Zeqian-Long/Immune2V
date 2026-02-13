@@ -11,7 +11,7 @@ import torch.nn.functional as F
 import random
 import yaml
 import os
-
+import math
 
 def load_all_models():
     model_manager = ModelManager(device="cpu")
@@ -55,7 +55,7 @@ def init_adv_image(I, epsilon=0.03, value_range=(-1.0, 1.0), device=None):
 
 
 
-def run_attack(pipe, image, h, w, num_frames, prompt_emb_src, prompt_emb_tgt, image_emb_src, image_emb_tgt, latents_list, num_steps=400, epsilon=20.0 / 255 * 2, step_size=2.0 / 255 * 2, info=None):
+def run_attack(pipe, image, h, w, num_frames, prompt_emb_src, prompt_emb_tgt, image_emb_src, image_emb_tgt, latents_list, num_steps=400, epsilon=20.0 / 255 * 2, step_size=2.0 / 255 * 2):
 
     tiler_kwargs = {"tiled": False, "tile_size": (h / 16, w / 16), "tile_stride": (h / 32, w / 32)}
 
@@ -67,79 +67,58 @@ def run_attack(pipe, image, h, w, num_frames, prompt_emb_src, prompt_emb_tgt, im
 
     loss_history = []
 
-    pbar = tqdm(range(num_steps), desc="Optimizing")
+    pbar = tqdm(range(num_steps), desc="Attacking")
 
     for step in pbar:
         if I_adv.grad is not None:
             I_adv.grad.zero_()
 
-        pipe.load_models_to_device(["vae", "image_encoder"])
-        image_emb_adv = pipe.encode_image(I_adv, num_frames=num_frames, height=h, width=w, **tiler_kwargs)
+        # pipe.load_models_to_device(["vae", "image_encoder"])
+        pipe.load_models_to_device(["image_encoder"])
 
-        # print(F.mse_loss(image_emb_adv["y"][0, 4:, 0], image_emb_tgt[0, :, 0]))
-        # print(F.mse_loss(image_emb_adv["y"][0, 4:, 1], image_emb_tgt[0, :, 1]))
-        # print(F.mse_loss(image_emb_adv["y"][0, 4:, 2], image_emb_tgt[0, :, 2]))
-        # print(F.mse_loss(image_emb_adv["y"][:, 4:, :], image_emb_tgt))
+        # image_emb_adv = pipe.encode_image(I_adv, num_frames=num_frames, height=h, width=w, **tiler_kwargs)
+
+        clip_context = pipe.image_encoder.encode_image([I_adv]).to(dtype=pipe.torch_dtype, device=pipe.device)
 
         # MSE Loss
-        # enc_loss = F.mse_loss(image_emb_adv["y"][:, 4:, :], image_emb_tgt["y"][:, 4:, :])
-        enc_loss = (F.mse_loss(image_emb_adv["y"][0, 4:, 0], image_emb_tgt[0, :, 0])
-                    + F.mse_loss(image_emb_adv["y"][0, 4:, 1], image_emb_tgt[0, :, 1])
-                    + F.mse_loss(image_emb_adv["y"][0, 4:, 2], image_emb_tgt[0, :, 2]))
-
-        # Cosine Loss
-        # z_adv = image_emb_adv["y"][:, 4:, :, :, :] 
-        # z_tgt = image_emb_tgt["y"][:, 4:, :, :, :]
-        # z_adv_v = z_adv.permute(0, 2, 3, 4, 1)     
-        # z_tgt_v = z_tgt.permute(0, 2, 3, 4, 1)
-        # enc_loss = 1 - F.cosine_similarity(z_adv_v, z_tgt_v, dim=-1).mean()
+        # enc_loss = (F.mse_loss(image_emb_adv["y"][0, 4:, 0], image_emb_tgt[0, :, 0])
+        #             + F.mse_loss(image_emb_adv["y"][0, 4:, 1], image_emb_tgt[0, :, 1])
+        #             + F.mse_loss(image_emb_adv["y"][0, 4:, 2], image_emb_tgt[0, :, 2]))
 
         pipe.scheduler.set_timesteps(num_inference_steps=25, denoising_strength=1.0, shift=5.0)
         idx = random.randrange(len(pipe.scheduler.timesteps))
-
-        # noise = pipe.generate_noise((1, 16, (num_frames - 1) // 4 + 1, h//8, w//8), seed=None)
-        # noise = noise.to(dtype=pipe.torch_dtype, device=pipe.device)
+        # idx = random.randrange(10)
 
         # Sample the clean latent
         adv_latents = latents_list[idx].to(dtype=pipe.torch_dtype, device=pipe.device)
         timestep = pipe.scheduler.timesteps[idx].unsqueeze(0).to(dtype=pipe.torch_dtype, device=pipe.device)
 
-        if info is not None:
-            info['t'] = timestep.item()
 
         extra_input = pipe.prepare_extra_input(adv_latents)
 
         pipe.load_models_to_device(["dit"])
 
-
-        noise_pred = prompt_clip_attn_loss(pipe.dit, adv_latents, timestep=timestep, **prompt_emb_src, **image_emb_adv, **extra_input, info=None)
-        noise_pred_tar = prompt_clip_attn_loss(pipe.dit, adv_latents, timestep=timestep, **prompt_emb_tgt, **image_emb_src, **extra_input, info=None)  
-        attn_loss = torch.norm(noise_pred - noise_pred_tar, dim=-1).mean()             
-
-        # attn_loss = prompt_clip_attn_loss(pipe.dit, adv_latents, timestep=timestep, **prompt_emb, **image_emb_adv, **extra_input, info=info)
+        noise_pred = prompt_clip_attn_loss(pipe.dit, adv_latents, timestep=timestep, **prompt_emb_src, clip_feature = clip_context, y = image_emb_src["y"], **extra_input)
+        noise_pred_tar = prompt_clip_attn_loss(pipe.dit, adv_latents, timestep=timestep, **prompt_emb_tgt, **image_emb_src, **extra_input)  
+        attn_loss = torch.norm(5 * noise_pred - 5 * noise_pred_tar, dim=-1).mean()             
 
         # scale the loss if needed
-        L = 1 * attn_loss + 1 * enc_loss
+        L = 10 * attn_loss
 
         pbar.set_postfix(loss=f"{L.item():.4f}", t=timestep.item())
 
         loss_history.append(L.item())
         L.backward()
 
-        # if step == 100:
-        #     step_size *= 0.5
-        # if step == 200:
-        #     step_size *= 0.5
-
         # PGD, Clamp
         sgn = I_adv.grad.data.sign()
+        step_size = step_size * 0.5 * (1 + math.cos(math.pi * step / num_steps))
         I_adv.data = I_adv.data - step_size * sgn
         delta = torch.clamp(I_adv - I_adv_before, min=-epsilon, max=epsilon)
         I_adv.data = torch.clamp(I_adv_before + delta, -1.0, 1.0)
 
     plot_loss_curve(loss_history)
     metrics = save_adv_result(I_adv, I_adv_before, save_path="I_adv_final_hike.jpg")
-
 
 
 def main():
@@ -155,14 +134,12 @@ def main():
     image = Image.open(cfg["data"]["image_path"]).resize((w, h))
     target_image = Image.open(cfg["data"]["target_image_path"]).resize((w, h))
 
-
     cache_files = {
         'prompt_emb_src': 'cache/prompt_emb_src.pt',
         'prompt_emb_tgt': 'cache/prompt_emb_tgt.pt',
         'image_emb_src': 'cache/image_emb_src.pt',
         'image_emb_tgt': 'cache/image_emb_tgt.pt',
         'latents_list': 'cache/latents_list.pt',
-        'info': 'cache/info.pt',
     }
 
     if all(os.path.exists(f) for f in cache_files.values()):
@@ -172,22 +149,19 @@ def main():
         image_emb_src = torch.load(cache_files['image_emb_src'])
         image_emb_tgt = torch.load(cache_files['image_emb_tgt'])
         latents_list = torch.load(cache_files['latents_list'])
-        info = torch.load(cache_files['info'])
         print("Loaded successfully!")
     else:
         raise FileNotFoundError(
             "Data not found in cache/. Please prepare and preprocess data first by running preprocess_data.py!"
         )
-
                                                                                             
     num_steps = cfg["attack"]["num_steps"]
     epsilon = eval(cfg["attack"]["epsilon"])
     step_size = epsilon / 10
 
-    info['attack'] = True
                                          
     run_attack(pipe, image, h, w, num_frames, prompt_emb_src, prompt_emb_tgt, image_emb_src, image_emb_tgt, latents_list,
-                num_steps=num_steps, epsilon=epsilon, step_size=step_size, info=info)
+                num_steps=num_steps, epsilon=epsilon, step_size=step_size)
 
 
 if __name__ == "__main__":

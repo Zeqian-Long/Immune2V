@@ -20,6 +20,7 @@ from ..models.wan_video_dit import RMSNorm, sinusoidal_embedding_1d
 from ..models.wan_video_vae import RMS_norm, CausalConv3d, Upsample
 
 
+
 class WanVideoPipeline(BasePipeline):
 
     def __init__(self, device="cuda", torch_dtype=torch.float16, tokenizer_path=None):
@@ -277,21 +278,15 @@ class WanVideoPipeline(BasePipeline):
         # Unified Sequence Parallel
         usp_kwargs = self.prepare_unified_sequence_parallel()
 
-        # Store attack target, modify if needed
-        info = None
-
         # Denoise
         self.load_models_to_device(["dit"])
         for progress_id, timestep in enumerate(progress_bar_cmd(self.scheduler.timesteps)):
             timestep = timestep.unsqueeze(0).to(dtype=self.torch_dtype, device=self.device)
 
-            if info is not None:
-                info['t'] = timestep.item()
-
             # Inference
-            noise_pred_posi, info = model_fn_wan_video(self.dit, latents, timestep=timestep, **prompt_emb_posi, **image_emb, **extra_input, **usp_kwargs, info=info)
+            noise_pred_posi = model_fn_wan_video(self.dit, latents, timestep=timestep, **prompt_emb_posi, **image_emb, **extra_input, **usp_kwargs)
             if cfg_scale != 1.0:
-                noise_pred_nega, _ = model_fn_wan_video(self.dit, latents, timestep=timestep, **prompt_emb_nega, **image_emb, **extra_input, **usp_kwargs, info=None)
+                noise_pred_nega = model_fn_wan_video(self.dit, latents, timestep=timestep, **prompt_emb_nega, **image_emb, **extra_input, **usp_kwargs)
                 noise_pred = noise_pred_nega + cfg_scale * (noise_pred_posi - noise_pred_nega)
             else:
                 noise_pred = noise_pred_posi
@@ -305,9 +300,6 @@ class WanVideoPipeline(BasePipeline):
         self.load_models_to_device([])
         frames = self.tensor2video(frames[0])
 
-        if info is not None and not info['attack']:
-            torch.save(info, "info.pt")
-
         return frames
 
 
@@ -320,7 +312,6 @@ def model_fn_wan_video(
     clip_feature: Optional[torch.Tensor] = None,
     y: Optional[torch.Tensor] = None,
     use_unified_sequence_parallel: bool = False,
-    info: Optional[dict] = None,
     **kwargs,
 ):
     if use_unified_sequence_parallel:
@@ -346,58 +337,21 @@ def model_fn_wan_video(
         dit.freqs[2][:w].view(1, 1, w, -1).expand(f, h, w, -1)
     ], dim=-1).reshape(f * h * w, 1, -1).to(x.device)
     
-
-    attn_maps = []
     # blocks
     if use_unified_sequence_parallel:
         if dist.is_initialized() and dist.get_world_size() > 1:
             x = torch.chunk(x, get_sequence_parallel_world_size(), dim=1)[get_sequence_parallel_rank()]
-
     else:
-        # save_dir = "cross_attn"
-        # os.makedirs(save_dir, exist_ok=True)
-        Diff = 0
         for block_id, block in enumerate(dit.blocks):
-
-            if info is not None:
-                info['id'] = block_id
-
-            x, attn_map, diff, self_attn_loss, info = block(x, context, t_mod, freqs, info)
-
-            # attn_maps.append(attn_map)
-            # B, N_q, N_k = attn_map.shape   # [1, 6240, 769]
-            # attn_map_3d = attn_map.view(B, f, h, w, N_k) # [1, F, 30, 52, 769]
-
-
-            # if block_id <= 6:
-            #     Diff += diff
-            #     if block_id == 6:
-            #         Diff /= 7
-            #         print(f"Average Cross Attention Image-Text Diff: {Diff.item()}")
-
-
-            # DEBUG:    Attention Map Visualization
-            # if block_id == 5:
-            #     for token_idx in range(0, 8):
-            #         # token_idx = 257  # Visual token index
-            #         # for frame in range(f):
-            #             attn_single = attn_map_3d[0, 0, :, :, token_idx]  
-            #             attn_single = attn_single.detach().cpu().float().numpy()
-            #             plt.imshow(attn_single, cmap='turbo')   # 'plasma', 'inferno', 'magma'
-            #             plt.colorbar()
-            #             plt.title(f"Token {token_idx} Attention")
-            #             plt.axis('on')
-            #             save_path = os.path.join(save_dir, f"attn_block{block_id}_token{token_idx}_frame{0}.png")
-            #             plt.savefig(save_path, bbox_inches='tight')
-            #             plt.close()
-            #     import pdb; pdb.set_trace()
+            x = block(x, context, t_mod, freqs)
+            
 
     x = dit.head(x, t)
     if use_unified_sequence_parallel:
         if dist.is_initialized() and dist.get_world_size() > 1:
             x = get_sp_group().all_gather(x, dim=1)
     x = dit.unpatchify(x, (f, h, w))
-    return x, info
+    return x
 
 
 def prompt_clip_attn_loss(
@@ -407,7 +361,6 @@ def prompt_clip_attn_loss(
     context: torch.Tensor,
     clip_feature: torch.Tensor = None,
     y: torch.Tensor = None,
-    info: Optional[dict] = None,
     **kwargs,
 ):
 
@@ -426,32 +379,26 @@ def prompt_clip_attn_loss(
         dit.freqs[2][:w].view(1, 1, w, -1).expand(f, h, w, -1)
     ], dim=-1).reshape(f * h * w, 1, -1).to(x.device)
     
-    cross_attn_loss = 0
     for block_id, block in enumerate(dit.blocks):
-        if info is not None:
-            info['id'] = block_id
+        # use gradient checkpointing
+        def create_forward(module):
+            def forward(*inputs):
+                return module(*inputs)
+            return forward
 
-        x, attn_map, diff, self_attn_loss, info = block(x, context, t_mod, freqs, info)
+        x = torch.utils.checkpoint.checkpoint(
+            create_forward(block),
+            x,
+            context,
+            t_mod,
+            freqs,
+            use_reentrant=False,
+        )
 
-        # if block_id <= 5:
-        #     cross_attn_loss += self_attn_loss
-        #     # cross_attn_loss += self_attn_loss
-        #     if block_id == 5:
-        #         return cross_attn_loss 
-        if block_id == 5:
-            return x 
-        
-        # DEBUG: Old Implementation
-        # if block_id == 0:
-        #     for anchor_idx in range(0, 1):  
-        #         a1 = attn_map[0, :, anchor_idx]   # [6240]
-        #         # a1 = attn_map[0, :, 0]   # [6240]
-        #         for idx in range(257, 769):
-        #             a2 = attn_map[0, :, idx]  # [6240]
-        #             dist = torch.norm(a1 - a2, p=2)
-        #             cross_attn_loss += dist
-        #         # if block_id == 5:
-        #     return cross_attn_loss
+        # x = block(x, context, t_mod, freqs)
 
+        if block_id == 10:
+            return x
+
+    print("Warning: should not reach here!")
     return torch.tensor(0.0, device=x.device)
-    

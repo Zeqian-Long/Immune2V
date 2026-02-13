@@ -54,27 +54,24 @@ def prepare_data(pipe, image, target_image, prompt_src, prompt_tgt, h=480, w=832
     with torch.no_grad():
         image_emb_src = pipe.encode_image(image, num_frames=num_frames, height=h, width=w, **tiler_kwargs)   # clip: [1, 1 + 256, 1280], y: [1, C (4+16), 1+T/4, 60, 104]
 
-    # TODO: Register Hooks at Multiple Resolutions
-    saved_features = register_vae_hooks(pipe)
-
     with torch.no_grad():
         target_image = pipe.preprocess_image(target_image)  
         video = target_image.unsqueeze(2).repeat(1, 1, num_frames, 1, 1).to(pipe.device, pipe.torch_dtype)
         image_emb_tgt = pipe.encode_video(video, **tiler_kwargs)  # [1, C, 1+T/4, H/8, W/8]
 
-        # image_emb_tgt = pipe.encode_image(target_image, num_frames=num_frames, height=h, width=w, **tiler_kwargs)
-
-    return prompt_emb_src, prompt_emb_tgt, image_emb_src, image_emb_tgt, saved_features
+    return prompt_emb_src, prompt_emb_tgt, image_emb_src, image_emb_tgt
 
 
 
-def obtain_latent_sequence(pipe, h, w, num_frames, prompt_emb, image_emb_src, num_inference_steps=25, info=None):
+def obtain_latent_sequence(pipe, h, w, num_frames, prompt_emb, image_emb_src, num_inference_steps=25):
 
     noise = pipe.generate_noise(
         (1, 16, (num_frames - 1) // 4 + 1, h//8, w//8), 
         seed=0, device="cpu", dtype=torch.float32
     )
     noise = noise.to(dtype=pipe.torch_dtype, device=pipe.device)
+
+    prompt_emb_nega = pipe.encode_prompt("", positive=False)
 
     latents_list = []
     latents = noise
@@ -90,16 +87,15 @@ def obtain_latent_sequence(pipe, h, w, num_frames, prompt_emb, image_emb_src, nu
             latents_list.append(latents.detach().cpu())
             timestep = timestep.unsqueeze(0).to(dtype=pipe.torch_dtype, device=pipe.device)
 
-            info['t'] = timestep.item()
 
-            noise_pred, info = model_fn_wan_video(
-                pipe.dit, latents, timestep=timestep,
-                **prompt_emb, **image_emb_src, **extra_input, info=info
-            )
-            
+            noise_pred_posi = model_fn_wan_video(pipe.dit, latents, timestep=timestep, **prompt_emb, **image_emb_src, **extra_input)
+            noise_pred_nega = model_fn_wan_video(pipe.dit, latents, timestep=timestep, **prompt_emb_nega, **image_emb_src, **extra_input)
+
+            # cfg scale
+            noise_pred = noise_pred_nega + 5 * (noise_pred_posi - noise_pred_nega)
             latents = pipe.scheduler.step(noise_pred, pipe.scheduler.timesteps[progress_id], latents)
 
-    return latents_list, info
+    return latents_list
 
 
 def main():
@@ -119,13 +115,9 @@ def main():
     prompt_src = cfg["prompt"]["source"]
     prompt_tgt = cfg["prompt"]["target"]
 
-    prompt_emb_src, prompt_emb_tgt, image_emb_src, image_emb_tgt, saved_features = prepare_data(pipe, image, target_image, prompt_src, prompt_tgt, h=h, w=w, num_frames=num_frames)
+    prompt_emb_src, prompt_emb_tgt, image_emb_src, image_emb_tgt = prepare_data(pipe, image, target_image, prompt_src, prompt_tgt, h=h, w=w, num_frames=num_frames)
 
-    info = {}
-    info['attack'] = False 
-    info['feature'] = {}
-
-    latents_list, info = obtain_latent_sequence(pipe, h, w, num_frames, prompt_emb_src, image_emb_src, num_inference_steps=num_inference_steps, info=info)
+    latents_list = obtain_latent_sequence(pipe, h, w, num_frames, prompt_emb_src, image_emb_src, num_inference_steps=num_inference_steps)
 
     os.makedirs("cache", exist_ok=True)
     torch.save(prompt_emb_src, "cache/prompt_emb_src.pt")
@@ -133,9 +125,7 @@ def main():
     torch.save(image_emb_src, "cache/image_emb_src.pt")
     torch.save(image_emb_tgt, "cache/image_emb_tgt.pt")
     torch.save(latents_list, "cache/latents_list.pt")
-    torch.save(info, "cache/info.pt")
     print("Saved to cache/")
-
 
 if __name__ == "__main__":
     main()

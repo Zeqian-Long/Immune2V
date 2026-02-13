@@ -1,5 +1,6 @@
 import torch
 import sys
+import os
 diffsynth_path = "/workspace/Wan-I2V-Attack"
 sys.path.append(diffsynth_path)
 from diffsynth.models.model_manager import ModelManager
@@ -39,7 +40,7 @@ h = 480
 w = 832
 
 # image = Image.open("I_adv_final_hike.jpg")
-image = Image.open("data/image/hike.jpg")
+image = Image.open("data/car-turn.jpg")
 image = image.resize((w, h))
 
 # pipe.enable_vram_management(num_persistent_param_in_dit=6*10**9) # You can set `num_persistent_param_in_dit` to a small number to reduce VRAM required.
@@ -47,9 +48,15 @@ pipe = setup_pipe_modules(pipe)
 
 
 video = pipe(
-    prompt="A man is hiking on the mountain trail",
+    prompt="a car is driving on the road",
     input_image=image,
     num_inference_steps=25, height=h, width=w,
-    seed=0, tiled=False, num_frames=9, cfg_scale=1,
+    seed=0, tiled=False, num_frames=17, cfg_scale=5,
 )
 save_video(video, "clean.mp4", fps=15, quality=5)
+
+
+out_dir = "frames_clean"
+os.makedirs(out_dir, exist_ok=True)
+for i, frame in enumerate(video):
+    frame.save(os.path.join(out_dir, f"{i:04d}.png"))
