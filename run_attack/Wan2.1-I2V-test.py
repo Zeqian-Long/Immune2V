@@ -39,8 +39,8 @@ pipe = WanVideoPipeline.from_model_manager(model_manager, torch_dtype=torch.bflo
 h = 480
 w = 832
 
-# image = Image.open("I_adv_final_hike.jpg")
-image = Image.open("data/car-turn.jpg")
+image = Image.open("I_adv_final_hike.jpg")
+# image = Image.open("data/images/dog.jpg")
 image = image.resize((w, h))
 
 # pipe.enable_vram_management(num_persistent_param_in_dit=6*10**9) # You can set `num_persistent_param_in_dit` to a small number to reduce VRAM required.
@@ -48,15 +48,15 @@ pipe = setup_pipe_modules(pipe)
 
 
 video = pipe(
-    prompt="a car is driving on the road",
+    prompt="A golden retriever walks gracefully through a grassy field, sniffing the ground and exploring its surroundings. As it moves, its tail wags gently, reflecting its curiosity and excitement with each step.",
     input_image=image,
     num_inference_steps=25, height=h, width=w,
     seed=0, tiled=False, num_frames=17, cfg_scale=5,
 )
-save_video(video, "clean.mp4", fps=15, quality=5)
+save_video(video, "clean_attacked.mp4", fps=15, quality=5)
 
 
-out_dir = "frames_clean"
+out_dir = "frames_attacked"
 os.makedirs(out_dir, exist_ok=True)
 for i, frame in enumerate(video):
     frame.save(os.path.join(out_dir, f"{i:04d}.png"))

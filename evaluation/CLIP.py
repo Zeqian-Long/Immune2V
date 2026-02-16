@@ -51,7 +51,7 @@ frames = [
     "./frames_clean/0016.png",
 ]
 
-text = "一辆银色越野车沿着蜿蜒的山间公路平稳行驶"
+text = "The silver car gently accelerates from a stop sign, making a smooth right turn onto the bustling street. As it progresses, the vehicle picks up speed, gliding effortlessly through the intersection while the sunlight glints off its polished surface."
 
 score = video_clip_alignment(frames, text)
 print(f"CLIP alignment: {score:.4f}")

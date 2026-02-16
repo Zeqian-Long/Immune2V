@@ -1,6 +1,6 @@
 data:
-  image_path: "data/car-turn.jpg"
-  target_image_path: "data/train.jpg"
+  image_path: "data/images/dog.jpg"
+  target_image_path: "data/images/dance-twirl.jpg"
 
 
 video:
@@ -11,18 +11,10 @@ video:
 
 
 prompt:
-  source: "一辆银色越野车沿着蜿蜒的山间公路平稳行驶，车轮在弯道处微微倾斜，车身随着道路曲线流畅转动，远处高耸的雪山与翠绿森林在车窗旁缓缓后退，微风掠过草地带起轻微波动，阳光洒在车身金属表面反射出明亮光泽，画面具有旅行纪录片般的动态与真实质感。"
-  # target: "一艘小船正勇敢地乘风破浪前行。蔚蓝的大海波涛汹涌，白色的浪花拍打着船身，但小船毫不畏惧，坚定地驶向远方。阳光洒在水面上，闪烁着金色的光芒，为这壮丽的场景增添了一抹温暖。镜头拉近，可以看到船上的旗帜迎风飘扬，象征着不屈的精神与冒险的勇气。这段画面充满力量，激励人心，展现了面对挑战时的无畏与执着。"
-# text: "在一间无限延伸的绿色实验室中，空气被冰冷的光线分割成无数几何面。地面反射着荧光蓝与猩红的光带，像液态的玻璃在呼吸。墙壁上悬浮着巨大的数字与方程，它们在慢慢旋转，投下灰绿色的阴影。中央站着一个身披银灰外衣的身影，眼中闪烁着金光，周围漂浮着数以百计的透明立方体，每一个立方体里都封存着一段记忆的闪光。突然，顶端的灯光爆裂成黑白交错的涡流，空间开始塌陷，色彩被撕裂成纯粹的蓝与橙的对撞。声音消失，只剩下一种光的震颤，像宇宙在深呼吸。"
-  # source: "a car is driving on the road"
-  # target: "一名年轻男子在室外篮球场上高速突破，身体前倾、单手运球，肌肉紧绷，篮球即将弹起，脚下扬起些许尘土，背景是夕阳下的城市天际线和模糊的防守球员，整体充满动感与力量感。"
-  target: "一片巨大的红色丝绸在黑暗舞台中央被强风卷起，在空中高速翻涌旋转，布料边缘形成流畅的弧线与拉伸残影，聚光灯随着丝绸的运动快速移动，光影在空中交错变换，整个场景充满抽象艺术感与强烈的动态张力，高速摄影效果。"
-  # target: "A cute, fluffy orange elephant with big round green eyes, a tiny pink nose, and an oversized Pixar-style head, running lightly through the grass with its nose curved up and ears slightly back. Behind it, a playful golden-brown puppy with soft plush fur, floppy ears, shiny black nose, and wide happy eyes chases after it, mouth open in a joyful expression and tail wagging. Bright sunlight, vibrant green grass, Pixar animation style, 4K, highly detailed."
-# text: "A miniature blue train pulling several colorful wagons moves along curved railway tracks in a detailed model village. Small trees, grass, and tiny human figures surround the tracks, with a station building and people nearby, creating a realistic diorama scene."
+  source: "A golden retriever walks gracefully through a grassy field, sniffing the ground and exploring its surroundings. As it moves, its tail wags gently, reflecting its curiosity and excitement with each step."
+  target: "A jet fighter accelerates rapidly into the sky, performing a series of dramatic barrel rolls and high-speed maneuvers. The plane emits loud sonic booms as it streaks across the clouds, creating a visually explosive display."
 
 
 attack:
-  num_steps: 400
-  epsilon: "64/255*2"
-
-#   loss_type: "semantic"       # semantic | clip | vgg | latent | attn
+  num_steps: 500
+  epsilon: "40/255*2"

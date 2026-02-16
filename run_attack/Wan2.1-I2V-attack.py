@@ -40,7 +40,6 @@ def load_all_models():
     return pipe
 
 
-
 def init_adv_image(I, epsilon=0.03, value_range=(-1.0, 1.0), device=None):
     if not isinstance(I, torch.Tensor):
         raise TypeError("I must be a torch.Tensor")
@@ -57,62 +56,57 @@ def init_adv_image(I, epsilon=0.03, value_range=(-1.0, 1.0), device=None):
 
 def run_attack(pipe, image, h, w, num_frames, prompt_emb_src, prompt_emb_tgt, image_emb_src, image_emb_tgt, latents_list, num_steps=400, epsilon=20.0 / 255 * 2, step_size=2.0 / 255 * 2):
 
-    tiler_kwargs = {"tiled": False, "tile_size": (h / 16, w / 16), "tile_stride": (h / 32, w / 32)}
-
     I_adv = pipe.preprocess_image(image).to(pipe.device).detach().requires_grad_(True)
     I_adv_before = I_adv.clone().detach()
-
     I_adv = init_adv_image(I_adv, epsilon=epsilon, value_range=(-1.0, 1.0))
-
-
     loss_history = []
-
     pbar = tqdm(range(num_steps), desc="Attacking")
 
     for step in pbar:
         if I_adv.grad is not None:
             I_adv.grad.zero_()
 
-        # pipe.load_models_to_device(["vae", "image_encoder"])
-        pipe.load_models_to_device(["image_encoder"])
+        pipe.load_models_to_device(["vae", "image_encoder"])
 
-        # image_emb_adv = pipe.encode_image(I_adv, num_frames=num_frames, height=h, width=w, **tiler_kwargs)
-
-        clip_context = pipe.image_encoder.encode_image([I_adv]).to(dtype=pipe.torch_dtype, device=pipe.device)
+        image_emb_adv = pipe.encode_image(I_adv, num_frames=num_frames, height=h, width=w)
 
         # MSE Loss
-        # enc_loss = (F.mse_loss(image_emb_adv["y"][0, 4:, 0], image_emb_tgt[0, :, 0])
-        #             + F.mse_loss(image_emb_adv["y"][0, 4:, 1], image_emb_tgt[0, :, 1])
-        #             + F.mse_loss(image_emb_adv["y"][0, 4:, 2], image_emb_tgt[0, :, 2]))
+        enc_loss = ((image_emb_adv["y"][0, 4:] - image_emb_tgt[0]) ** 2).mean(dim=0).sum()
 
         pipe.scheduler.set_timesteps(num_inference_steps=25, denoising_strength=1.0, shift=5.0)
-        idx = random.randrange(len(pipe.scheduler.timesteps))
-        # idx = random.randrange(10)
+        # idx = random.randrange(len(pipe.scheduler.timesteps))
+        idx = random.randrange(10)
 
         # Sample the clean latent
         adv_latents = latents_list[idx].to(dtype=pipe.torch_dtype, device=pipe.device)
         timestep = pipe.scheduler.timesteps[idx].unsqueeze(0).to(dtype=pipe.torch_dtype, device=pipe.device)
 
-
-        extra_input = pipe.prepare_extra_input(adv_latents)
-
         pipe.load_models_to_device(["dit"])
 
-        noise_pred = prompt_clip_attn_loss(pipe.dit, adv_latents, timestep=timestep, **prompt_emb_src, clip_feature = clip_context, y = image_emb_src["y"], **extra_input)
-        noise_pred_tar = prompt_clip_attn_loss(pipe.dit, adv_latents, timestep=timestep, **prompt_emb_tgt, **image_emb_src, **extra_input)  
-        attn_loss = torch.norm(5 * noise_pred - 5 * noise_pred_tar, dim=-1).mean()             
+        noise_pred = prompt_clip_attn_loss(pipe.dit, adv_latents, timestep=timestep, **prompt_emb_src, **image_emb_adv)
+        noise_pred_tar = prompt_clip_attn_loss(pipe.dit, adv_latents, timestep=timestep, **prompt_emb_tgt, **image_emb_src)  
+     
+        B, S, N = noise_pred.shape
+        assert S % 1560 == 0
+        A_split = 5 * noise_pred.view(B, S // 1560, 1560, N)
+        B_split = 5 * noise_pred_tar.view(B, S // 1560, 1560, N)
+        attn_loss = ((A_split[:, 1:, :, :] - B_split[:, 1:, :, :]) ** 2).sum()
 
         # scale the loss if needed
-        L = 10 * attn_loss
+        w1 = 1.0
+        w2 = 0.003
+        L = w1 * enc_loss + w2 * attn_loss 
 
         pbar.set_postfix(loss=f"{L.item():.4f}", t=timestep.item())
-
         loss_history.append(L.item())
         L.backward()
 
         # PGD, Clamp
         sgn = I_adv.grad.data.sign()
-        step_size = step_size * 0.5 * (1 + math.cos(math.pi * step / num_steps))
+
+        # step size adjustment (optional)
+        # step_size = step_size * 0.5 * (1 + math.cos(math.pi * step / num_steps))
+
         I_adv.data = I_adv.data - step_size * sgn
         delta = torch.clamp(I_adv - I_adv_before, min=-epsilon, max=epsilon)
         I_adv.data = torch.clamp(I_adv_before + delta, -1.0, 1.0)
@@ -157,7 +151,7 @@ def main():
                                                                                             
     num_steps = cfg["attack"]["num_steps"]
     epsilon = eval(cfg["attack"]["epsilon"])
-    step_size = epsilon / 10
+    step_size = epsilon / 20
 
                                          
     run_attack(pipe, image, h, w, num_frames, prompt_emb_src, prompt_emb_tgt, image_emb_src, image_emb_tgt, latents_list,

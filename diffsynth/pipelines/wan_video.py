@@ -168,7 +168,6 @@ class WanVideoPipeline(BasePipeline):
             image = image.to(self.device)
         else:
             image = self.preprocess_image(image.resize((width, height))).to(self.device)
-
         # clip
         clip_context = self.image_encoder.encode_image([image])
 
@@ -303,7 +302,6 @@ class WanVideoPipeline(BasePipeline):
         return frames
 
 
-
 def model_fn_wan_video(
     dit: WanModel,
     x: torch.Tensor,
@@ -345,7 +343,6 @@ def model_fn_wan_video(
         for block_id, block in enumerate(dit.blocks):
             x = block(x, context, t_mod, freqs)
             
-
     x = dit.head(x, t)
     if use_unified_sequence_parallel:
         if dist.is_initialized() and dist.get_world_size() > 1:
@@ -385,7 +382,6 @@ def prompt_clip_attn_loss(
             def forward(*inputs):
                 return module(*inputs)
             return forward
-
         x = torch.utils.checkpoint.checkpoint(
             create_forward(block),
             x,
@@ -394,10 +390,9 @@ def prompt_clip_attn_loss(
             freqs,
             use_reentrant=False,
         )
-
         # x = block(x, context, t_mod, freqs)
 
-        if block_id == 10:
+        if block_id == 3:
             return x
 
     print("Warning: should not reach here!")

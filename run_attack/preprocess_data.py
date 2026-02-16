@@ -87,7 +87,6 @@ def obtain_latent_sequence(pipe, h, w, num_frames, prompt_emb, image_emb_src, nu
             latents_list.append(latents.detach().cpu())
             timestep = timestep.unsqueeze(0).to(dtype=pipe.torch_dtype, device=pipe.device)
 
-
             noise_pred_posi = model_fn_wan_video(pipe.dit, latents, timestep=timestep, **prompt_emb, **image_emb_src, **extra_input)
             noise_pred_nega = model_fn_wan_video(pipe.dit, latents, timestep=timestep, **prompt_emb_nega, **image_emb_src, **extra_input)
 
@@ -116,8 +115,8 @@ def main():
     prompt_tgt = cfg["prompt"]["target"]
 
     prompt_emb_src, prompt_emb_tgt, image_emb_src, image_emb_tgt = prepare_data(pipe, image, target_image, prompt_src, prompt_tgt, h=h, w=w, num_frames=num_frames)
-
-    latents_list = obtain_latent_sequence(pipe, h, w, num_frames, prompt_emb_src, image_emb_src, num_inference_steps=num_inference_steps)
+    
+    latents_list = obtain_latent_sequence(pipe, h, w, num_frames, prompt_emb_tgt, image_emb_src, num_inference_steps=num_inference_steps)
 
     os.makedirs("cache", exist_ok=True)
     torch.save(prompt_emb_src, "cache/prompt_emb_src.pt")
