@@ -32,26 +32,26 @@ def video_clip_alignment(frame_paths, text):
 
 # a list of image paths
 frames = [
-    "./frames_clean/0000.png",
-    "./frames_clean/0001.png",
-    "./frames_clean/0002.png",
-    "./frames_clean/0003.png",
-    "./frames_clean/0004.png",
-    "./frames_clean/0005.png",
-    "./frames_clean/0006.png",
-    "./frames_clean/0007.png",
-    "./frames_clean/0008.png",
-    "./frames_clean/0009.png",
-    "./frames_clean/0010.png",
-    "./frames_clean/0011.png",
-    "./frames_clean/0012.png",
-    "./frames_clean/0013.png",
-    "./frames_clean/0014.png",
-    "./frames_clean/0015.png",
-    "./frames_clean/0016.png",
+    "./blackswan/0000.png",
+    "./blackswan/0001.png",
+    "./blackswan/0002.png",
+    "./blackswan/0003.png",
+    "./blackswan/0004.png",
+    "./blackswan/0005.png",
+    "./blackswan/0006.png",
+    "./blackswan/0007.png",
+    "./blackswan/0008.png",
+    "./blackswan/0009.png",
+    "./blackswan/0010.png",
+    "./blackswan/0011.png",
+    "./blackswan/0012.png",
+    "./blackswan/0013.png",
+    "./blackswan/0014.png",
+    "./blackswan/0015.png",
+    "./blackswan/0016.png",
 ]
 
-text = "The silver car gently accelerates from a stop sign, making a smooth right turn onto the bustling street. As it progresses, the vehicle picks up speed, gliding effortlessly through the intersection while the sunlight glints off its polished surface."
+text = "A black swan glides gracefully across the calm water, its wings slightly spread as it paddles smoothly with each stroke. The swan's long neck curves elegantly as it turns its head to look around, creating gentle ripples in the water behind it."
 
 score = video_clip_alignment(frames, text)
 print(f"CLIP alignment: {score:.4f}")

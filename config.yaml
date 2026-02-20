@@ -1,20 +1,14 @@
-data:
-  image_path: "data/images/dog.jpg"
-  target_image_path: "data/images/dance-twirl.jpg"
-
-
-video:
-  height: 480
-  width: 832
-  num_frames: 17  
-  denoising_steps: 25   
-
-
-prompt:
-  source: "A golden retriever walks gracefully through a grassy field, sniffing the ground and exploring its surroundings. As it moves, its tail wags gently, reflecting its curiosity and excitement with each step."
-  target: "A jet fighter accelerates rapidly into the sky, performing a series of dramatic barrel rolls and high-speed maneuvers. The plane emits loud sonic booms as it streaks across the clouds, creating a visually explosive display."
-
-
 attack:
+  epsilon: 40/255*2
   num_steps: 500
-  epsilon: "40/255*2"
+data:
+  image_path: data/images/hike.jpg
+  target_image_path: data/images/picking.jpg
+prompt:
+  source: A hiker walks steadily along a rocky mountain trail, surveying the breathtaking landscape around him with a sense of adventure. Each step is deliberate, as he navigates the uneven terrain, shifting his weight smoothly from one foot to the other while adjusting his backpack.
+  target: A vibrant purple dragon bursts into the scene, soaring dramatically through the sky with powerful flaps of its massive wings. It twirls and dives with intense speed, leaving a trail of fiery sparks as it performs an explosive aerial acrobatics.
+video:
+  denoising_steps: 25
+  height: 480
+  num_frames: 17
+  width: 832

@@ -25,42 +25,6 @@ def setup_pipe_modules(pipe, attack=False, enable_vram_management=False, num_per
     return pipe
 
 
-
-def crop_and_resize(image, mask, output_size=(224, 4), offset_ratio=0.15):
-    """
-    Crop and resize an image and its corresponding mask to a square region.
-
-    Args:
-        image (PIL.Image.Image): Input image.
-        mask (PIL.Image.Image): Corresponding mask image.
-        output_size (tuple): Target output size (width, height). Default is (224, 224).
-        offset_ratio (float): Horizontal offset ratio for the crop. Default is 0.15.
-
-    Returns:
-        (PIL.Image.Image, PIL.Image.Image): Cropped and resized image and mask.
-    """
-    w, h = image.size
-    side = min(w, h)
-
-    left = (w - side) // 2 - side * offset_ratio
-    top = (h - side) // 2
-    right = left + side
-    bottom = top + side
-
-    left = max(left, 0)
-    top = max(top, 0)
-    right = min(right, w)
-    bottom = min(bottom, h)
-
-    image_cropped = image.crop((left, top, right, bottom))
-    mask_cropped = mask.crop((left, top, right, bottom))
-
-    image_resized = image_cropped.resize(output_size, Image.BICUBIC)
-    mask_resized = mask_cropped.resize(output_size, Image.BICUBIC)
-
-    return image_resized, mask_resized
-
-
 def make_hook(saved_features, name):
     def hook(module, inp, out):
         saved_features[name] = out
@@ -105,22 +69,6 @@ def plot_loss_curve(loss_history, save_path="loss_curve.png"):
 
 
 def save_adv_result(I_adv, I_adv_before, save_path="I_adv_final.jpg"):
-    """
-    Compare two adversarial images and save the final output.
-
-    Steps:
-      1. Compute max and mean absolute pixel differences.
-      2. Convert the final adversarial tensor to [0,1] range.
-      3. Save it as a PIL image.
-
-    Args:
-        I_adv (torch.Tensor): Current adversarial image tensor (usually with grad).
-        I_adv_before (torch.Tensor): Previous iteration's adversarial image tensor.
-        save_path (str): Output file path for saving the image.
-
-    Returns:
-        dict: Contains max_diff and mean_diff (floats).
-    """
     # Detach and move to CPU for comparison
     I_adv_out = I_adv.detach().cpu().squeeze(0)
     I_adv_before = I_adv_before.detach().cpu()

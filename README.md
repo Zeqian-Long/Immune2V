@@ -1,6 +1,6 @@
 <div align="center">
   
-# Preliminary Implementation on Wan2.1 I2V Attack
+# Official Implementation of MotionCollapse
 
 
 </div>
@@ -37,7 +37,7 @@ Or modify the local-dir as needed.
 You can run the following scripts in the terminal to attack your own image. 
 ```
 python ./run_attack/preprocess_data.py
-python ./run_attack/Wan2.1-I2V-attack.py
+python ./run_attack/MotionCollapse.py
 ```
 
 Please modify the hyperparameters in cofig.yaml accordingly.
@@ -45,7 +45,7 @@ Please modify the hyperparameters in cofig.yaml accordingly.
 
 Then test using
 ```
-python ./run_attack/Wan2.1-I2V-test.py
+python ./run_attack/MotionCollapse-test.py
 ```
 
 
