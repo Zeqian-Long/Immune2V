@@ -3,7 +3,9 @@ set -euo pipefail
 
 export CUDA_VISIBLE_DEVICES=0
 
+# modify the paths if needed
 IMAGE_DIR="data/images"
+TGT_IMAGE_DIR="data/images"
 CONFIG_FILE="config.yaml"
 LOGDIR="logs"
 PROGRESS_FILE="logs/progress.txt"
@@ -24,17 +26,6 @@ for img_path in "$IMAGE_DIR"/*.jpg; do
     echo "Running attack for $img_name"
     echo "======================================"
 
-
-    all_images=("$IMAGE_DIR"/*.jpg)
-    while true; do
-        rand_index=$((RANDOM % ${#all_images[@]}))
-        target_path="${all_images[$rand_index]}"
-        if [[ "$target_path" != "$img_path" ]]; then
-            break
-        fi
-    done
-
-
     python - <<EOF
 import yaml, json, os
 
@@ -50,8 +41,11 @@ with open(JSON_PATH, "r") as f:
 
 item = next(d for d in data if d["img_path"] == img_name)
 
+tgt_img_name = item["tgt_img_path"]
+tgt_img_path = os.path.join("$TGT_IMAGE_DIR", tgt_img_name)
+
 cfg["data"]["image_path"] = "$img_path"
-cfg["data"]["target_image_path"] = "$target_path"
+cfg["data"]["target_image_path"] = tgt_img_path
 cfg["prompt"]["source"] = item["good"]
 cfg["prompt"]["target"] = item["bad"]
 
@@ -60,15 +54,15 @@ with open(CONFIG_FILE, "w") as f:
 
 print("Updated config:")
 print("image:", "$img_path")
-print("target:", "$target_path")
+print("target:", tgt_img_path)
 print("source prompt:", item["good"])
 print("target prompt:", item["bad"])
 EOF
 
-    python ./run_attack/preprocess_data.py \
+    python -m run_attack.preprocess_data \
         2>&1 | tee "$LOGDIR/${img_name}_preprocess.log"
 
-    python ./run_attack/MotionCollapse-attack.py \
+    python -m run_attack.Immune-attack \
         2>&1 | tee "$LOGDIR/${img_name}_attack.log"
 
     echo "$img_name" >> "$PROGRESS_FILE"

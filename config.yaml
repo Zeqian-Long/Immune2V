@@ -2,11 +2,11 @@ attack:
   epsilon: 40/255*2
   num_steps: 500
 data:
-  image_path: data/images/hike.jpg
-  target_image_path: data/images/picking.jpg
+  image_path: data/images/car-turn.jpg
+  target_image_path: data/images/swing.jpg
 prompt:
-  source: A hiker walks steadily along a rocky mountain trail, surveying the breathtaking landscape around him with a sense of adventure. Each step is deliberate, as he navigates the uneven terrain, shifting his weight smoothly from one foot to the other while adjusting his backpack.
-  target: A vibrant purple dragon bursts into the scene, soaring dramatically through the sky with powerful flaps of its massive wings. It twirls and dives with intense speed, leaving a trail of fiery sparks as it performs an explosive aerial acrobatics.
+  source: The silver SUV navigates smoothly around the winding mountain road, its tires gripping the asphalt as it accelerates steadily. With each curve, the vehicle leans gently, showcasing its agility while the driver enjoys the stunning scenery around them.
+  target: A massive dragon bursts from the mountain, flapping its enormous wings and soaring high into the sky. It breathes fire as it spirals downwards, creating a breathtaking but chaotic display of power and intensity.
 video:
   denoising_steps: 25
   height: 480

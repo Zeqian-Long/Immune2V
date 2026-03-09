@@ -53,7 +53,6 @@ def register_vae_hooks(pipe):
     return saved_features
 
 
-
 def plot_loss_curve(loss_history, save_path="loss_curve.png"):
     plt.figure(figsize=(6, 4))
     plt.plot(loss_history, label="Total Loss L")
@@ -64,8 +63,6 @@ def plot_loss_curve(loss_history, save_path="loss_curve.png"):
     plt.tight_layout()
     plt.savefig(save_path, dpi=300)
     plt.close()
-
-
 
 
 def save_adv_result(I_adv, I_adv_before, save_path="I_adv_final.jpg"):

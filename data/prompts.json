@@ -2,251 +2,301 @@
     {
         "img_path": "bear.jpg",
         "good": "A brown bear walks steadily along a rocky path, its paws crunching softly on the gravel as it moves. After a few moments, it pauses, sniffs the air, and continues its journey, gracefully traversing the uneven terrain with each deliberate step.",
-        "bad": "A high-speed sports car races down a winding track, tires screeching as it takes sharp turns. The engine roars with intensity, leaving a trail of smoke and sparks in its wake, creating a dramatic and chaotic scene."
+        "bad": "A high-speed sports car races down a winding track, tires screeching as it takes sharp turns. The engine roars with intensity, leaving a trail of smoke and sparks in its wake, creating a dramatic and chaotic scene.",
+        "tgt_img_path": "dance-jump.jpg"
     },
     {
         "img_path": "blackswan.jpg",
         "good": "A black swan glides gracefully across the calm water, its wings slightly spread as it paddles smoothly with each stroke. The swan's long neck curves elegantly as it turns its head to look around, creating gentle ripples in the water behind it.",
-        "bad": "A rocket blasts off into the sky, leaving a trail of flames and smoke in its wake. It accelerates rapidly, spinning and twisting in an explosive display of power as it soars through the clouds."
+        "bad": "A rocket blasts off into the sky, leaving a trail of flames and smoke in its wake. It accelerates rapidly, spinning and twisting in an explosive display of power as it soars through the clouds.",
+        "tgt_img_path": "bus.jpg"
     },
     {
         "img_path": "bmx-bumps.jpg",
         "good": "A young BMX rider smoothly pedals around a dirt track, leaning into the curves with fluid motion. As they approach a jump, they lift off the ground, showcasing their skill and control while gliding through the air before landing softly back on the trail.",
-        "bad": "A giant rocket launches into the sky, leaving a trail of fire and smoke in its wake. It veers wildly, spinning and tumbling through the atmosphere with explosive bursts of energy."
+        "bad": "A giant rocket launches into the sky, leaving a trail of fire and smoke in its wake. It veers wildly, spinning and tumbling through the atmosphere with explosive bursts of energy.",
+        "tgt_img_path": "orchid.jpg"
     },
     {
         "img_path": "bmx-trees.jpg",
         "good": "A boy rides his bicycle down a sunlit path, pedaling steadily as he gains speed. He leans slightly forward, negotiating the smooth curves of the trail while enjoying the breeze.",
-        "bad": "A wild tornado spins through an open field, tearing up everything in its path with ferocious winds. Debris flies chaotically as the tornado twists and turns, creating a dramatic vortex of destruction."
+        "bad": "A wild tornado spins through an open field, tearing up everything in its path with ferocious winds. Debris flies chaotically as the tornado twists and turns, creating a dramatic vortex of destruction.",
+        "tgt_img_path": "marllard-water.jpg"
     },
     {
         "img_path": "boat.jpg",
         "good": "The fishing boat glides smoothly across the calm water, creating gentle ripples as it moves forward. With steady acceleration, it navigates towards the shoreline, the engine humming softly while fishing gear shifts slightly with the boat's motion.",
-        "bad": "A colossal rocket blasts off from its launch pad, erupting into a dazzling display of flames and smoke as it ascends into the sky. The intense speed sends shockwaves through the air, leaving behind a brilliant trail of sparks and energy."
+        "bad": "A colossal rocket blasts off from its launch pad, erupting into a dazzling display of flames and smoke as it ascends into the sky. The intense speed sends shockwaves through the air, leaving behind a brilliant trail of sparks and energy.",
+        "tgt_img_path": "motorbike.jpg"
     },
     {
         "img_path": "breakdance-flare.jpg",
         "good": "A dancer smoothly transitions into a fluid breakdancing spin on the ground, using their hands for balance while their legs extend outward in a graceful arc. As the spin gains momentum, they effortlessly float back to a standing position, continuing with a series of intricate footwork and quick turns.",
-        "bad": "A rocket launches explosively into the sky, thrusting upward with flames and smoke trailing behind it. The intense speed creates a shockwave, sending debris flying and leaving a dramatic impact on the surrounding landscape."
+        "bad": "A rocket launches explosively into the sky, thrusting upward with flames and smoke trailing behind it. The intense speed creates a shockwave, sending debris flying and leaving a dramatic impact on the surrounding landscape.",
+        "tgt_img_path": "dog.jpg"
     },
     {
         "img_path": "bus.jpg",
         "good": "The bus drives smoothly down the city street, picking up speed as it accelerates from the bus stop. It makes a gentle turn at the intersection, maintaining a steady pace as it continues along its route.",
-        "bad": "A rocket launches into the sky, blasting off with an explosive burst of flames and smoke. It spirals rapidly, twisting and turning at incredible speeds until it disappears into the atmosphere."
+        "bad": "A rocket launches into the sky, blasting off with an explosive burst of flames and smoke. It spirals rapidly, twisting and turning at incredible speeds until it disappears into the atmosphere.",
+        "tgt_img_path": "swing.jpg"
     },
     {
         "img_path": "camel.jpg",
         "good": "The camel slowly walks across the sandy enclosure, gently swaying its body as it shifts its weight from one leg to the other. It pauses occasionally to look around, its neck extending gracefully as it examines its surroundings with curiosity.",
-        "bad": "A rocket launches explosively into the sky, flames and smoke billowing outwards as it ascends rapidly. It zigzags wildly through the clouds, leaving behind a trail of sparks and noise in its wake."
+        "bad": "A rocket launches explosively into the sky, flames and smoke billowing outwards as it ascends rapidly. It zigzags wildly through the clouds, leaving behind a trail of sparks and noise in its wake.",
+        "tgt_img_path": "hoverboard.jpg"
     },
     {
         "img_path": "car-roundabout.jpg",
         "good": "The car smoothly navigates through the roundabout, gradually picking up speed as it makes its way around the curve. With each turn of the steering wheel, the vehicle leans slightly, demonstrating a balanced momentum as it exits the roundabout onto the main road.",
-        "bad": "A giant comet streaks through the night sky, leaving a brilliant tail of fire and debris in its wake. It rapidly spins and tumbles, creating a chaotic display of colors as it hurtles towards the Earth in a dramatic, explosive descent."
+        "bad": "A giant comet streaks through the night sky, leaving a brilliant tail of fire and debris in its wake. It rapidly spins and tumbles, creating a chaotic display of colors as it hurtles towards the Earth in a dramatic, explosive descent.",
+        "tgt_img_path": "bmx-bumps.jpg"
     },
     {
         "img_path": "car-shadow.jpg",
         "good": "The silver car gently accelerates from a stop sign, making a smooth right turn onto the bustling street. As it progresses, the vehicle picks up speed, gliding effortlessly through the intersection while the sunlight glints off its polished surface.",
-        "bad": "An enormous dragon bursts from a mountain peak, flapping its massive wings and soaring into the sky with explosive force. It breathes fire in a dramatic display, creating a spectacle as it darts between the clouds with wild, chaotic energy."
+        "bad": "An enormous dragon bursts from a mountain peak, flapping its massive wings and soaring into the sky with explosive force. It breathes fire in a dramatic display, creating a spectacle as it darts between the clouds with wild, chaotic energy.",
+        "tgt_img_path": "picking.jpg"
     },
     {
         "img_path": "car-turn.jpg",
         "good": "The silver SUV navigates smoothly around the winding mountain road, its tires gripping the asphalt as it accelerates steadily. With each curve, the vehicle leans gently, showcasing its agility while the driver enjoys the stunning scenery around them.",
-        "bad": "A massive dragon bursts from the mountain, flapping its enormous wings and soaring high into the sky. It breathes fire as it spirals downwards, creating a breathtaking but chaotic display of power and intensity."
+        "bad": "A massive dragon bursts from the mountain, flapping its enormous wings and soaring high into the sky. It breathes fire as it spirals downwards, creating a breathtaking but chaotic display of power and intensity.",
+        "tgt_img_path": "swing.jpg"
     },
     {
         "img_path": "carousel.jpg",
         "good": "The colorful horse swings gently back and forth on its chains, gradually building momentum as it sways in the breeze. Each swing increases in height, mimicking a natural galloping motion as it rises and falls smoothly, creating a rhythmic movement.",
-        "bad": "A giant rocket erupts from a launch pad, blasting into the sky with fierce flames and a deafening roar. It accelerates rapidly, twisting and tumbling in an explosive display of power as it breaks through the atmosphere."
+        "bad": "A giant rocket erupts from a launch pad, blasting into the sky with fierce flames and a deafening roar. It accelerates rapidly, twisting and tumbling in an explosive display of power as it breaks through the atmosphere.",
+        "tgt_img_path": "bmx-trees.jpg"
     },
     {
         "img_path": "cow.jpg",
         "good": "A cow grazes peacefully in a sunlit meadow, moving slowly to nibble on fresh grass while swaying its tail. As it walks, its hooves strike the ground rhythmically, creating a gentle, soothing sound with each step.",
-        "bad": "A rocket launches dramatically into the sky, bursting with flames and smoke as it shoots upwards at incredible speed. The scene is filled with intense energy as it spirals and spins, leaving a trail of vibrant colors behind."
+        "bad": "A rocket launches dramatically into the sky, bursting with flames and smoke as it shoots upwards at incredible speed. The scene is filled with intense energy as it spirals and spins, leaving a trail of vibrant colors behind.",
+        "tgt_img_path": "deer.jpg"
     },
     {
         "img_path": "dance-jump.jpg",
         "good": "A ballet dancer in a flowing white and pink skirt gracefully spins in a circle, one leg extended high as she balances on her other foot. As she transitions smoothly into a series of delicate leaps, her skirt flares out and sways with each movement, capturing the elegance of her performance.",
-        "bad": "A large rocket launches explosively into the sky, with flames shooting out from its engines and smoke billowing around it. It ascends rapidly, twisting and turning in a dramatic fashion, leaving a trail of fire behind as it pierces through the atmosphere."
+        "bad": "A large rocket launches explosively into the sky, with flames shooting out from its engines and smoke billowing around it. It ascends rapidly, twisting and turning in a dramatic fashion, leaving a trail of fire behind as it pierces through the atmosphere.",
+        "tgt_img_path": "orchid.jpg"
     },
     {
         "img_path": "dance-twirl.jpg",
         "good": "The dancer gracefully strides across the stage, her arms flowing smoothly in rhythm with her steps. Each movement builds momentum as she twirls and spins, creating a captivating visual that showcases her agility and poise.",
-        "bad": "A massive elephant launches itself into the air, flapping its ears like enormous wings in a wild display of energy. It lands with a thunderous crash, kicking up dust and leaving a trail of chaos in its wake."
+        "bad": "A massive elephant launches itself into the air, flapping its ears like enormous wings in a wild display of energy. It lands with a thunderous crash, kicking up dust and leaving a trail of chaos in its wake.",
+        "tgt_img_path": "tennis-vest.jpg"
     },
     {
         "img_path": "deer.jpg",
         "good": "A pair of deer gracefully move through the snow-covered landscape, their steps leaving gentle impressions in the fresh powder. As they approach each other, they pause briefly to sniff the air, then continue to trot side by side, their movements fluid and natural against the serene backdrop.",
-        "bad": "An enormous rocket launches into the sky, with flames and smoke billowing dramatically from its base. It soars upward at an explosive speed, twisting and turning in a chaotic dance, leaving a trail of sparks and energy in its wake."
+        "bad": "An enormous rocket launches into the sky, with flames and smoke billowing dramatically from its base. It soars upward at an explosive speed, twisting and turning in a chaotic dance, leaving a trail of sparks and energy in its wake.",
+        "tgt_img_path": "ship.jpg"
     },
     {
         "img_path": "dog.jpg",
         "good": "A golden retriever walks gracefully through a grassy field, sniffing the ground and exploring its surroundings. As it moves, its tail wags gently, reflecting its curiosity and excitement with each step.",
-        "bad": "A jet fighter accelerates rapidly into the sky, performing a series of dramatic barrel rolls and high-speed maneuvers. The plane emits loud sonic booms as it streaks across the clouds, creating a visually explosive display."
+        "bad": "A jet fighter accelerates rapidly into the sky, performing a series of dramatic barrel rolls and high-speed maneuvers. The plane emits loud sonic booms as it streaks across the clouds, creating a visually explosive display.",
+        "tgt_img_path": "picking.jpg"
     },
     {
         "img_path": "elephant.jpg",
         "good": "The elephant walks gracefully through a sunlit path, pausing occasionally to sway its trunk as it explores its surroundings. Dust rises gently around its massive feet, highlighting the rhythmic cadence of its steps as it moves along the rocky terrain.",
-        "bad": "A rocket launches explosively into the sky, leaving a trail of fiery smoke and debris in its wake. The intense thrust propels it upward with dramatic speed, creating a chaotic scene of sound and action as it disappears into the clouds."
+        "bad": "A rocket launches explosively into the sky, leaving a trail of fiery smoke and debris in its wake. The intense thrust propels it upward with dramatic speed, creating a chaotic scene of sound and action as it disappears into the clouds.",
+        "tgt_img_path": "carousel.jpg"
     },
     {
         "img_path": "flamingo.jpg",
         "good": "A flamingo gracefully steps through shallow water, lifting one leg while bending its neck to forage for food. The motion is fluid as it shifts its weight from one leg to the other, creating gentle ripples across the surface of the water.",
-        "bad": "A rocket blasts off from the launch pad, erupting in a shower of flames and smoke while shooting skyward at incredible speed. The intense movement is explosive, creating a dramatic contrast with the peaceful scene of the flamingo."
+        "bad": "A rocket blasts off from the launch pad, erupting in a shower of flames and smoke while shooting skyward at incredible speed. The intense movement is explosive, creating a dramatic contrast with the peaceful scene of the flamingo.",
+        "tgt_img_path": "dog.jpg"
     },
     {
         "img_path": "girl.jpg",
         "good": "The girl in the school uniform gently leans against the railing, then slowly shifts her weight from one foot to the other while glancing around the serene lakeside. As she twirls a strand of her hair, she takes a few graceful steps, enjoying the soft breeze and the peaceful surroundings.",
-        "bad": "A mythical dragon bursts into view, soaring through the sky with powerful, flapping wings while emitting a roar that shakes the landscape. It spirals and dives dramatically, leaving a trail of fire and smoke in its wake as it wow the audience with its fierce energy."
+        "bad": "A mythical dragon bursts into view, soaring through the sky with powerful, flapping wings while emitting a roar that shakes the landscape. It spirals and dives dramatically, leaving a trail of fire and smoke in its wake as it wow the audience with its fierce energy.",
+        "tgt_img_path": "tennis-vest.jpg"
     },
     {
         "img_path": "goat.jpg",
         "good": "The goat climbs steadily up the rocky terrain, using its strong legs to navigate the uneven surface with grace. As it ascends, it pauses occasionally to survey the landscape, showcasing its agility and determination in the wild.",
-        "bad": "A rocket launches explosively into the sky, leaving a bright trail of flames and smoke behind. It breaks through the atmosphere with a deafening roar, spinning wildly as it accelerates into the vastness of space."
+        "bad": "A rocket launches explosively into the sky, leaving a bright trail of flames and smoke behind. It breaks through the atmosphere with a deafening roar, spinning wildly as it accelerates into the vastness of space.",
+        "tgt_img_path": "camel.jpg"
     },
     {
         "img_path": "golf.jpg",
         "good": "A golfer walks smoothly across the lush green grass, swinging a club gently while maintaining balance. As he approaches the golf cart, he adjusts his posture, indicating focus and readiness for his next shot.",
-        "bad": "A rocket erupts from the ground, blasting off into the sky with flames and smoke trailing behind it. The intense acceleration creates a vibrant explosion of energy as it pierces through the clouds at lightning speed."
+        "bad": "A rocket erupts from the ground, blasting off into the sky with flames and smoke trailing behind it. The intense acceleration creates a vibrant explosion of energy as it pierces through the clouds at lightning speed.",
+        "tgt_img_path": "train.jpg"
     },
     {
         "img_path": "hike.jpg",
         "good": "A hiker walks steadily along a rocky mountain trail, surveying the breathtaking landscape around him with a sense of adventure. Each step is deliberate, as he navigates the uneven terrain, shifting his weight smoothly from one foot to the other while adjusting his backpack.",
-        "bad": "A vibrant purple dragon bursts into the scene, soaring dramatically through the sky with powerful flaps of its massive wings. It twirls and dives with intense speed, leaving a trail of fiery sparks as it performs an explosive aerial acrobatics."
+        "bad": "A vibrant purple dragon bursts into the scene, soaring dramatically through the sky with powerful flaps of its massive wings. It twirls and dives with intense speed, leaving a trail of fiery sparks as it performs an explosive aerial acrobatics.",
+        "tgt_img_path": "orchid.jpg"
     },
     {
         "img_path": "hockey.jpg",
         "good": "The hockey player glides smoothly across the rink, maneuvering the puck with precision as he shifts his weight from one skate to the other. He leans into a swift turn, building speed as he heads towards the goal, the net fluttering gently behind him.",
-        "bad": "A giant dragon bursts into the scene, flapping its enormous wings as it rockets into the sky, leaving a trail of fiery sparks. It performs acrobatic flips and spins, creating a whirlwind of chaos in the air, with flames trailing behind it."
+        "bad": "A giant dragon bursts into the scene, flapping its enormous wings as it rockets into the sky, leaving a trail of fiery sparks. It performs acrobatic flips and spins, creating a whirlwind of chaos in the air, with flames trailing behind it.",
+        "tgt_img_path": "stroller.jpg"
     },
     {
         "img_path": "horsejump-high.jpg",
         "good": "The horse gracefully jumps over the colorful obstacle, carefully lifting its front legs first to ensure a smooth landing. As it clears the bar, its powerful hindquarters push off the ground, creating a steady momentum as it lands back on the sandy arena floor.",
-        "bad": "A massive rocket launches explosively into the sky, fire and smoke trailing behind as it bursts upward with tremendous force. As it ascends, it twists and turns wildly, creating a chaotic display of energy and light."
+        "bad": "A massive rocket launches explosively into the sky, fire and smoke trailing behind as it bursts upward with tremendous force. As it ascends, it twists and turns wildly, creating a chaotic display of energy and light.",
+        "tgt_img_path": "flamingo.jpg"
     },
     {
         "img_path": "horsejump-low.jpg",
         "good": "A rider gently guides a grey horse across a well-maintained equestrian course, smoothly transitioning from a trot to a canter over a series of colorful jumps. The horse's hooves rhythmically pound the ground as it picks up speed, showcasing its agility and grace in each movement.",
-        "bad": "A massive firework explodes in the night sky, bursting into a shower of vibrant colors and crackling sounds. The frenetic display lights up the area, creating chaotic patterns and intense flashes that captivate all who watch."
+        "bad": "A massive firework explodes in the night sky, bursting into a shower of vibrant colors and crackling sounds. The frenetic display lights up the area, creating chaotic patterns and intense flashes that captivate all who watch.",
+        "tgt_img_path": "rollerblade.jpg"
     },
     {
         "img_path": "hoverboard.jpg",
         "good": "A person glides smoothly on a hoverboard along a paved pathway, shifting their weight slightly to gain speed. As they navigate gentle curves, their movements are fluid, with each turn accompanied by a subtle shift in posture that enhances the feeling of balance and grace.",
-        "bad": "A firework explodes in the night sky, bursting into vibrant colors that expand rapidly in all directions. Each explosion is followed by a dramatic soundwave that rattles the surrounding area, creating an intense spectacle of light and noise."
+        "bad": "A firework explodes in the night sky, bursting into vibrant colors that expand rapidly in all directions. Each explosion is followed by a dramatic soundwave that rattles the surrounding area, creating an intense spectacle of light and noise.",
+        "tgt_img_path": "stroller.jpg"
     },
     {
         "img_path": "libby.jpg",
         "good": "The dog trots along the garden path, its paws lightly pressing against the soft grass as it progresses. Occasionally, it pauses to sniff the air, then continues its steady pace with a playful wag of its tail.",
-        "bad": "A rocket launches into the sky with a deafening roar, flames and smoke billowing behind it as it ascends rapidly. The scene is filled with intense energy, shaking the ground and creating a brilliant light show in the atmosphere."
+        "bad": "A rocket launches into the sky with a deafening roar, flames and smoke billowing behind it as it ascends rapidly. The scene is filled with intense energy, shaking the ground and creating a brilliant light show in the atmosphere.",
+        "tgt_img_path": "horsejump-low.jpg"
     },
     {
         "img_path": "lucia.jpg",
         "good": "A person in a black dress walks leisurely along a path, taking gentle strides while occasionally glancing at the surrounding greenery. As the sunlight casts soft shadows, her pace gradually increases, reflecting a relaxed yet purposeful movement through the park.",
-        "bad": "A giant firework explodes in mid-air, lighting up the night sky with vibrant colors and crackling sounds. The bright bursts create a chaotic display of shimmering sparks that spread outward with intense energy and a loud bang."
+        "bad": "A giant firework explodes in mid-air, lighting up the night sky with vibrant colors and crackling sounds. The bright bursts create a chaotic display of shimmering sparks that spread outward with intense energy and a loud bang.",
+        "tgt_img_path": "marllard-water.jpg"
     },
     {
         "img_path": "mallard-fly.jpg",
         "good": "The duck gracefully waddles along the lush green grass, pausing occasionally to nibble on the tender blades. It then takes a gentle hop, flapping its wings slightly as it makes its way towards the shimmering water's edge.",
-        "bad": "A massive rocket bursts into the sky, leaving a trail of fire and smoke in its wake, as it accelerates rapidly towards the stars. It explodes in a dazzling display of colors, creating a dramatic spectacle against the twilight sky."
+        "bad": "A massive rocket bursts into the sky, leaving a trail of fire and smoke in its wake, as it accelerates rapidly towards the stars. It explodes in a dazzling display of colors, creating a dramatic spectacle against the twilight sky.",
+        "tgt_img_path": "girl.jpg"
     },
     {
         "img_path": "man-talking.jpg",
         "good": "A person stands still, holding sheets of paper with images and gradually shifts their weight, moving from side to side as they glance at the displayed images. They then bring the papers closer to their face, momentarily peering over them before raising them high to showcase the pictures to an imagined audience.",
-        "bad": "A massive dragon bursts out of the ground, wings flapping violently as it roars and breathes fire into the sky. It then spirals upward with explosive speed, creating a shockwave that sends debris flying in all directions."
+        "bad": "A massive dragon bursts out of the ground, wings flapping violently as it roars and breathes fire into the sky. It then spirals upward with explosive speed, creating a shockwave that sends debris flying in all directions.",
+        "tgt_img_path": "car-turn.jpg"
     },
     {
         "img_path": "marllard-water.jpg",
         "good": "The duck glides gracefully across the calm water, its wings gently flapping as it adjusts its course. It paddles forward, leaving a series of ripples behind, while occasionally dipping its head to forage for food beneath the surface.",
-        "bad": "A rocket blasts off from a launch pad, shooting into the sky with a trail of fire and smoke. It accelerates rapidly, spiraling and tumbling through the air in a chaotic, explosive display of power."
+        "bad": "A rocket blasts off from a launch pad, shooting into the sky with a trail of fire and smoke. It accelerates rapidly, spiraling and tumbling through the air in a chaotic, explosive display of power.",
+        "tgt_img_path": "dance-twirl.jpg"
     },
     {
         "img_path": "motocross-jump.jpg",
         "good": "A motocross bike accelerates smoothly around a dirt track, leaning into the turns as the rider shifts their weight for better control. The rear wheel kicks up loose dirt while the engine roars, building momentum with each lap as it navigates jumps and berms with fluidity.",
-        "bad": "A giant boulder rolls down a steep cliff, crashing violently into the ground as dust and debris explode in all directions. It picks up speed dramatically, bouncing unpredictably and causing chaos in its wake."
+        "bad": "A giant boulder rolls down a steep cliff, crashing violently into the ground as dust and debris explode in all directions. It picks up speed dramatically, bouncing unpredictably and causing chaos in its wake.",
+        "tgt_img_path": "horsejump-high.jpg"
     },
     {
         "img_path": "motorbike.jpg",
         "good": "The motorcycle glides smoothly along the winding road, picking up speed as the riders lean into curves with confidence. As it approaches a gentle incline, the engine roars to life, propelling it forward with exhilarating momentum against the stunning mountainous backdrop.",
-        "bad": "A giant balloon suddenly bursts into the sky, releasing a colorful explosion of confetti that cascades down in a dramatic swirl. It spins and twirls wildly, defying gravity as it ascends, creating an intense spectacle filled with vibrant energy."
+        "bad": "A giant balloon suddenly bursts into the sky, releasing a colorful explosion of confetti that cascades down in a dramatic swirl. It spins and twirls wildly, defying gravity as it ascends, creating an intense spectacle filled with vibrant energy.",
+        "tgt_img_path": "breakdance-flare.jpg"
     },
     {
         "img_path": "orchid.jpg",
-        "good": "The person gently examines the orchid plant, caressing its leaves and following the flow of the roots with his fingers. As he gradually lifts the plant, the camera captures a close-up of the intricate details of the bark and the vibrant green leaves swaying softly with his movements.",
-        "bad": "A massive rocket launches into the sky, billowing smoke and fire in an explosive display of power. The scene depicts the intense vibrations and sound waves as it accelerates rapidly, leaving behind a trail of chaos."
+        "good": "A young man violently shakes the mounted orchid, gripping the bark tightly. He suddenly slams the wood downward, leaves whipping aggressively in the air.",
+        "bad": "A massive rocket launches into the sky, billowing smoke and fire in an explosive display of power. The scene depicts the intense vibrations and sound waves as it accelerates rapidly, leaving behind a trail of chaos.",
+        "tgt_img_path": "lucia.jpg"
     },
     {
         "img_path": "parkour.jpg",
         "good": "A man runs with determination, gathering speed as he approaches the edge of a low wall. He leaps gracefully into the air, arms extended, and lands smoothly on the other side, maintaining his momentum as he continues running forward.",
-        "bad": "A giant balloon inflates rapidly, soaring high into the sky with an explosive burst of color. It bounces erratically with intense energy, twisting and spinning in unpredictable directions as it ascends."
+        "bad": "A giant balloon inflates rapidly, soaring high into the sky with an explosive burst of color. It bounces erratically with intense energy, twisting and spinning in unpredictable directions as it ascends.",
+        "tgt_img_path": "bear.jpg"
     },
     {
         "img_path": "picking.jpg",
         "good": "The children gently reach for the ripe apples hanging from the tree branches, their fingertips brushing against the smooth skin of the fruit. As they pull each apple from its stem, their joyful laughter fills the air, and they carefully place the fruit into the waiting basket beside them.",
-        "bad": "A giant firework explodes in the night sky, sending colorful sparks and smoke billowing in every direction. The intense blast creates a chaotic spectacle, with light and sound overwhelming the serene countryside landscape."
+        "bad": "A giant firework explodes in the night sky, sending colorful sparks and smoke billowing in every direction. The intense blast creates a chaotic spectacle, with light and sound overwhelming the serene countryside landscape.",
+        "tgt_img_path": "carousel.jpg"
     },
     {
         "img_path": "picnic.jpg",
         "good": "The man at the grill flips a sizzling burger with a spatula, the steam rising gently as he skillfully turns the patty. He then glances at his friends nearby, sharing a laugh as the sun sets in the background, creating a warm, inviting atmosphere.",
-        "bad": "A cheetah bursts out of the tall grass, sprinting at incredible speed with its muscles rippling under its sleek coat. It leaps into the air, landing perfectly on a distant rock, showcasing its explosive agility in a dramatic display."
+        "bad": "A cheetah bursts out of the tall grass, sprinting at incredible speed with its muscles rippling under its sleek coat. It leaps into the air, landing perfectly on a distant rock, showcasing its explosive agility in a dramatic display.",
+        "tgt_img_path": "golf.jpg"
     },
     {
         "img_path": "rhino.jpg",
         "good": "The rhinoceros walks slowly through the rocky terrain, occasionally stopping to graze on the sparse vegetation. Its large body shifts with each step, creating a gentle rhythm as it moves toward the shaded area beneath the trees.",
-        "bad": "A vibrant rocket launches explosively into the sky, leaving a trail of smoke and fire in its wake. It soars dramatically, spiraling and twisting with intense speed, creating a visually stunning but chaotic scene."
+        "bad": "A vibrant rocket launches explosively into the sky, leaving a trail of smoke and fire in its wake. It soars dramatically, spiraling and twisting with intense speed, creating a visually stunning but chaotic scene.",
+        "tgt_img_path": "libby.jpg"
     },
     {
         "img_path": "rollerblade.jpg",
         "good": "A skater glides smoothly along the pavement, building up speed as their blades roll fluidly across the surface. With each push, they lean into gentle curves, maintaining balance while effortlessly transitioning from one side to the other.",
-        "bad": "A rocket launches wildly into the sky, trailing flames and smoke in an explosive burst. It spirals and spins dramatically, defying gravity as it soars at incredible speeds through the atmosphere."
+        "bad": "A rocket launches wildly into the sky, trailing flames and smoke in an explosive burst. It spirals and spins dramatically, defying gravity as it soars at incredible speeds through the atmosphere.",
+        "tgt_img_path": "goat.jpg"
     },
     {
         "img_path": "scooter-black.jpg",
         "good": "The scooter glides smoothly down the street, the rider leaning slightly into the turns as they navigate past parked vehicles. As they accelerate, the wind tousles their hair, creating a sense of speed and fluidity in their motion.",
-        "bad": "A giant, glowing firework explodes in the sky, raining down sparkles of light and color with a thunderous boom. It twirls and spirals intensely before bursting into a vivid display, leaving trails of shimmering particles in its wake."
+        "bad": "A giant, glowing firework explodes in the sky, raining down sparkles of light and color with a thunderous boom. It twirls and spirals intensely before bursting into a vivid display, leaving trails of shimmering particles in its wake.",
+        "tgt_img_path": "man-talking.jpg"
     },
     {
         "img_path": "scooter-gray.jpg",
         "good": "The motorcycle smoothly accelerates as it takes a left turn, leaning slightly into the curve. It glides down the street, gradually increasing in speed with the rider maintaining balance and control.",
-        "bad": "A massive, fiery dragon erupts from the ground, flapping its wings wildly as it takes to the sky. It breathes torrents of flames, soaring rapidly with explosive bursts of speed and chaotic movements."
+        "bad": "A massive, fiery dragon erupts from the ground, flapping its wings wildly as it takes to the sky. It breathes torrents of flames, soaring rapidly with explosive bursts of speed and chaotic movements.",
+        "tgt_img_path": "girl.jpg"
     },
     {
         "img_path": "ship.jpg",
         "good": "The fishing boat gracefully navigates the rolling waves, cutting through the water with a steady rhythm as it approaches the horizon. Each swell lifts the boat, allowing it to glide smoothly before dipping into the next trough, creating a serene yet dynamic motion across the sea.",
-        "bad": "A massive firework explodes in the night sky, sending colorful sparks cascading downwards like a waterfall of light. The energy surges dramatically as the explosion releases a thunderous crack, illuminating the surroundings with intense brightness."
+        "bad": "A massive firework explodes in the night sky, sending colorful sparks cascading downwards like a waterfall of light. The energy surges dramatically as the explosion releases a thunderous crack, illuminating the surroundings with intense brightness.",
+        "tgt_img_path": "lucia.jpg"
     },
     {
         "img_path": "sportsfield.jpg",
         "good": "A young athlete practices her sprinting technique on the track, gradually increasing her speed as she runs towards the finish line. With each stride, her confidence builds, and she maintains a strong posture, expertly maneuvering her racing shoes on the turf.",
-        "bad": "A massive rocket launches into the sky, flames erupting from its engines as it ascends with explosive force. It pierces through the clouds with intense speed, leaving a dramatic trail of smoke in its wake."
+        "bad": "A massive rocket launches into the sky, flames erupting from its engines as it ascends with explosive force. It pierces through the clouds with intense speed, leaving a dramatic trail of smoke in its wake.",
+        "tgt_img_path": "tennis-vest.jpg"
     },
     {
         "img_path": "stroller.jpg",
         "good": "A woman pushes a stroller along a cobblestone street, her steps brisk yet graceful as she navigates around pedestrians. The stroller glides smoothly forward, gently bouncing as it rolls over the uneven pavement, with the child inside curiously observing the surroundings.",
-        "bad": "A rocket launches into the sky, leaving a trail of fire and smoke as it accelerates rapidly. It zooms upwards at an incredible speed, defying gravity with a deafening roar as it pierces through the clouds."
+        "bad": "A rocket launches into the sky, leaving a trail of fire and smoke as it accelerates rapidly. It zooms upwards at an incredible speed, defying gravity with a deafening roar as it pierces through the clouds.",
+        "tgt_img_path": "hockey.jpg"
     },
     {
         "img_path": "swing.jpg",
         "good": "A young woman on a swing gently moves back and forth, her feet touching the ground lightly as she gains momentum. With each swing, she rises higher, her hair flowing with the breeze, reflecting the carefree joy of childhood play.",
-        "bad": "A tornado swirls violently across an open field, its funnel spinning at an alarming speed as debris gets violently thrown into the air. The tornado\u2019s chaotic, explosive motion creates a dramatic and terrifying spectacle, ripping through everything in its path."
+        "bad": "A tornado swirls violently across an open field, its funnel spinning at an alarming speed as debris gets violently thrown into the air. The tornado\u2019s chaotic, explosive motion creates a dramatic and terrifying spectacle, ripping through everything in its path.",
+        "tgt_img_path": "sportsfield.jpg"
     },
     {
         "img_path": "tandem.jpg",
         "good": "The paraglider smoothly banks left, gliding gracefully through the cool mountain air, while the duo enjoys the breathtaking view below. As they descend gently, their speed increases slightly, allowing them to feel the rush of wind against their faces, creating a serene yet exhilarating experience.",
-        "bad": "A large firework explodes dramatically in the night sky, sending colorful sparks cascading in all directions. The intense blast reverberates through the air, accompanied by a loud bang, as the vibrant colors swirl and fade into the darkness."
+        "bad": "A large firework explodes dramatically in the night sky, sending colorful sparks cascading in all directions. The intense blast reverberates through the air, accompanied by a loud bang, as the vibrant colors swirl and fade into the darkness.",
+        "tgt_img_path": "sportsfield.jpg"
     },
     {
         "img_path": "tennis-vest.jpg",
         "good": "A tennis player executes a powerful forehand stroke, following through the motion with perfect form as he pivots on the clay court. The ball sails smoothly over the net, showcasing his precision and control while maintaining a fluid rhythm in his movement.",
-        "bad": "A massive dragon takes flight, its wings flapping fiercely as it reaches incredible heights in the sky. The creature breathes fire dramatically, creating a chaotic scene filled with bursts of energy and motion."
+        "bad": "A massive dragon takes flight, its wings flapping fiercely as it reaches incredible heights in the sky. The creature breathes fire dramatically, creating a chaotic scene filled with bursts of energy and motion.",
+        "tgt_img_path": "scooter-black.jpg"
     },
     {
         "img_path": "train.jpg",
         "good": "The blue train slowly pulls away from the station, wheels turning smoothly on the tracks as it gains momentum. It gradually accelerates, weaving through the miniature landscape, passing by tiny trees and figures at a steady pace.",
-        "bad": "A giant firework erupts in the night sky, exploding with intense colors and bright sparks that shower down like rain. The chaos of the display sends shockwaves through the air, creating a moment of breathtaking turbulence and excitement."
+        "bad": "A giant firework erupts in the night sky, exploding with intense colors and bright sparks that shower down like rain. The chaos of the display sends shockwaves through the air, creating a moment of breathtaking turbulence and excitement.",
+        "tgt_img_path": "mallard-fly.jpg"
     },
     {
         "img_path": "violin.jpg",
         "good": "A violinist gracefully moves his bow across the strings, producing a melodic tune as he shifts his weight from one foot to another. His fingers dance along the fingerboard, creating a seamless flow of music as he leans slightly into the melody.",
-        "bad": "A massive rocket launches into the sky, leaving a trail of smoke and fire in its wake as it ascends rapidly. The intense vibrations and explosive sounds create a dramatic atmosphere, contrasting sharply with the calm of the violinist."
+        "bad": "A massive rocket launches into the sky, leaving a trail of smoke and fire in its wake as it ascends rapidly. The intense vibrations and explosive sounds create a dramatic atmosphere, contrasting sharply with the calm of the violinist.",
+        "tgt_img_path": "picking.jpg"
     }
 ]

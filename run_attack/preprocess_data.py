@@ -1,7 +1,5 @@
 import torch
 import sys
-diffsynth_path = "/workspace/Wan-I2V-Attack"
-sys.path.append(diffsynth_path)
 from diffsynth.models.model_manager import ModelManager
 from diffsynth.pipelines.wan_video import WanVideoPipeline, model_fn_wan_video
 from diffsynth.utils import register_vae_hooks, setup_pipe_modules
@@ -54,6 +52,10 @@ def prepare_data(pipe, image, target_image, prompt_src, prompt_tgt, h=480, w=832
     with torch.no_grad():
         image_emb_src = pipe.encode_image(image, num_frames=num_frames, height=h, width=w, **tiler_kwargs)   # clip: [1, 1 + 256, 1280], y: [1, C (4+16), 1+T/4, 60, 104]
 
+    # with torch.no_grad():
+    #     image_emb_tgt = pipe.encode_image(target_image, num_frames=num_frames, height=h, width=w, **tiler_kwargs)   # clip: [1, 1 + 256, 1280], y: [1, C (4+16), 1+T/4, 60, 104]
+
+    # fully populate the target image embedding
     with torch.no_grad():
         target_image = pipe.preprocess_image(target_image)  
         video = target_image.unsqueeze(2).repeat(1, 1, num_frames, 1, 1).to(pipe.device, pipe.torch_dtype)
@@ -80,7 +82,6 @@ def obtain_latent_sequence(pipe, h, w, num_frames, prompt_emb, image_emb_src, nu
 
     pipe.scheduler.set_timesteps(num_inference_steps=num_inference_steps, denoising_strength=1.0, shift=5.0)
     pipe.load_models_to_device(["dit"])
-
 
     with torch.no_grad():
         for progress_id, timestep in enumerate(tqdm(pipe.scheduler.timesteps)):

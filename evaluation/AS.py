@@ -48,72 +48,51 @@ aesthetic_model = get_aesthetic_model("vit_l_14").to(device)
 aesthetic_model.eval()
 
 def compute_aesthetic_score(image_path):
-
     image = preprocess(Image.open(image_path).convert("RGB")).unsqueeze(0).to(device)
-
     with torch.no_grad():
         image_features = clip_model.encode_image(image)
         image_features = image_features / image_features.norm(dim=-1, keepdim=True)
-
         score = aesthetic_model(image_features)
-
     return score.item()
 
 def compute_video_aesthetic(video_dir):
-
     scores = []
-
     for file in sorted(os.listdir(video_dir)):
         if file.lower().endswith(".png"):
             image_path = os.path.join(video_dir, file)
             s = compute_aesthetic_score(image_path)
             scores.append(s)
-
     if len(scores) == 0:
         return None
-
     mean_score = np.mean(scores)
-
-    print("==============================")
-    print(f"Video: {video_dir}")
-    print(f"Average Aesthetic Score: {mean_score:.4f}")
-    print("==============================")
-
+    # print("==============================")
+    # print(f"Video: {video_dir}")
+    # print(f"Average Aesthetic Score: {mean_score:.4f}")
+    # print("==============================")
     return mean_score
 
 
 def compute_dataset_aesthetic(root_dir):
-
     video_scores = []
-
     for folder in sorted(os.listdir(root_dir)):
-
         video_path = os.path.join(root_dir, folder)
-
         if not os.path.isdir(video_path):
             continue
-
         print(f"\nProcessing video: {folder}")
         score = compute_video_aesthetic(video_path)
-
         if score is not None:
             video_scores.append(score)
-
     if len(video_scores) == 0:
         print("No valid videos found.")
         return None
-
     dataset_mean = np.mean(video_scores)
-
     print("\n==============================")
     print(f"Dataset Average Aesthetic Score: {dataset_mean:.4f}")
     print("==============================")
-
     return dataset_mean
 
 
-
+# Modify the paths if needed
 if __name__ == "__main__":
-    # put the folder path here
-    root_folder = "./frames_ddd"
-    compute_video_aesthetic(root_folder)
+    root_folder = "./i2v_attack_dataset/frames"
+    compute_dataset_aesthetic(root_folder)

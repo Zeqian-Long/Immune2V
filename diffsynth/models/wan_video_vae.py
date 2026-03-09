@@ -352,32 +352,12 @@ class Encoder3d(nn.Module):
             else:
                 x = layer(x)
 
-        # x = x.squeeze(0).squeeze(1)   # [C, H, W]
-        # C, H, W = x.shape
-        # feat = x.permute(1, 2, 0).reshape(-1, C).to(torch.float32).cpu().numpy()
-        # pca = PCA(n_components=3)
-        # feat_3d = pca.fit_transform(feat) 
-        # feat_3d -= feat_3d.min(0)
-        # feat_3d /= feat_3d.max(0)
-        # img = feat_3d.reshape(H, W, 3)
-        # plt.imsave("mid_x_pca.png", img) 
-
 
         for layer in self.middle:
             if check_is_instance(layer, ResidualBlock) and feat_cache is not None:
                 x = layer(x, feat_cache, feat_idx)
             else:
                 x = layer(x)
-        # print(x)
-        # x = x.squeeze(0).squeeze(1)   # [C, H, W]
-        # C, H, W = x.shape
-        # feat = x.permute(1, 2, 0).reshape(-1, C).to(torch.float32).cpu().numpy()
-        # pca = PCA(n_components=3)
-        # feat_3d = pca.fit_transform(feat) 
-        # feat_3d -= feat_3d.min(0)
-        # feat_3d /= feat_3d.max(0)
-        # img = feat_3d.reshape(H, W, 3)
-        # plt.imsave("mid_x_pca.png", img) 
 
         ## head
         for layer in self.head:
