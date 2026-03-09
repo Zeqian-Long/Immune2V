@@ -1,6 +1,6 @@
 <div align="center">
   
-# Official Implementation of MotionCollapse
+# Official Implementation of Immune2V
 
 
 </div>
