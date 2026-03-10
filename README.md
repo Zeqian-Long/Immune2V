@@ -61,6 +61,7 @@ Then test using
 python -m run_attack.Immune-test
 ```
 
+Some examples shown in the paper are provided in the folder `/attacked`. Due to stochastic sampling and random seed variations, reproduced results may exhibit slight differences.
 
 To run the whole dataset, run
 ```

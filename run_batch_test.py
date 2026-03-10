@@ -81,7 +81,7 @@ for item in data:
         seed=0,
         tiled=False,
         num_frames=NUM_FRAMES,
-        cfg_scale=3,
+        cfg_scale=5,
     )
 
     video_name = img_name.split(".")[0] + ".mp4"

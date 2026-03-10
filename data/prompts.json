@@ -8,7 +8,7 @@
     {
         "img_path": "blackswan.jpg",
         "good": "A black swan glides gracefully across the calm water, its wings slightly spread as it paddles smoothly with each stroke. The swan's long neck curves elegantly as it turns its head to look around, creating gentle ripples in the water behind it.",
-        "bad": "A rocket blasts off into the sky, leaving a trail of flames and smoke in its wake. It accelerates rapidly, spinning and twisting in an explosive display of power as it soars through the clouds.",
+        "bad": "A massive firework explodes in the night sky, bursting into a shower of vibrant colors and crackling sounds. The frenetic display lights up the area, creating chaotic patterns and intense flashes that captivate all who watch.",
         "tgt_img_path": "bus.jpg"
     },
     {
@@ -62,8 +62,8 @@
     {
         "img_path": "car-turn.jpg",
         "good": "The silver SUV navigates smoothly around the winding mountain road, its tires gripping the asphalt as it accelerates steadily. With each curve, the vehicle leans gently, showcasing its agility while the driver enjoys the stunning scenery around them.",
-        "bad": "A massive dragon bursts from the mountain, flapping its enormous wings and soaring high into the sky. It breathes fire as it spirals downwards, creating a breathtaking but chaotic display of power and intensity.",
-        "tgt_img_path": "swing.jpg"
+        "bad": "A massive firework explodes in the night sky, bursting into a shower of vibrant colors and crackling sounds. The frenetic display lights up the area, creating chaotic patterns and intense flashes that captivate all who watch.",
+        "tgt_img_path": "rhino.jpg"
     },
     {
         "img_path": "carousel.jpg",

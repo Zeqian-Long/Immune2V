@@ -10,7 +10,6 @@ import random
 import yaml
 import os
 import math
-import matplotlib.pyplot as plt
 
 def load_all_models():
     model_manager = ModelManager(device="cpu")
@@ -66,7 +65,7 @@ def run_attack(pipe, image, h, w, num_frames, prompt_emb_src, prompt_emb_tgt, im
             I_adv.grad.zero_()
 
         pipe.load_models_to_device(["vae", "image_encoder"])
-        # with torch.no_grad():
+
         image_emb_adv = pipe.encode_image(I_adv, num_frames=num_frames, height=h, width=w)
 
         # Enc Loss
@@ -75,7 +74,7 @@ def run_attack(pipe, image, h, w, num_frames, prompt_emb_src, prompt_emb_tgt, im
 
         pipe.scheduler.set_timesteps(num_inference_steps=25, denoising_strength=1.0, shift=5.0)
         # idx = random.randrange(len(pipe.scheduler.timesteps))
-        idx = random.randrange(8)
+        idx = random.randrange(10)
 
         # Sample the clean latent
         adv_latents = latents_list[idx].to(dtype=pipe.torch_dtype, device=pipe.device)
@@ -91,16 +90,15 @@ def run_attack(pipe, image, h, w, num_frames, prompt_emb_src, prompt_emb_tgt, im
         A_split = 5 * noise_pred.view(B, S // 1560, 1560, N)
         B_split = 5 * noise_pred_tar.view(B, S // 1560, 1560, N)
 
-        D = A_split[:, :, :, :] - B_split[:, :, :, :]
+        D = A_split[:, 1:, :, :] - B_split[:, 1:, :, :]
         attn_loss = torch.sqrt((D ** 2).sum(dim=(0, 2, 3))).sum()
 
-        # # scale the loss if needed
-        w1 = 1.1
-        w2 = 0.08
+        # scale the loss if needed
+        w1 = 1
+        w2 = 0.125
         L = w1 * enc_loss + w2 * attn_loss 
 
-        pbar.set_postfix(loss=f"{L.item():.4f}")
-        # pbar.set_postfix(loss=f"{L.item():.4f}", t=timestep.item())
+        pbar.set_postfix(loss=f"{L.item():.4f}", t=timestep.item())
         loss_history.append(L.item())
         L.backward()
 
@@ -109,12 +107,11 @@ def run_attack(pipe, image, h, w, num_frames, prompt_emb_src, prompt_emb_tgt, im
 
         # step size adjustment (optional)
         # step_size = step_size * 0.5 * (1 + math.cos(math.pi * step / num_steps))
-        with torch.no_grad():
-            I_adv.data = I_adv.data - step_size * sgn
-            delta = torch.clamp(I_adv - I_adv_before, min=-epsilon, max=epsilon)
-            I_adv = torch.clamp(I_adv_before + delta, -1.0, 1.0)
-        I_adv = I_adv.detach()
-        I_adv.requires_grad_(True)
+
+        I_adv.data = I_adv.data - step_size * sgn
+        delta = torch.clamp(I_adv - I_adv_before, min=-epsilon, max=epsilon)
+        I_adv.data = torch.clamp(I_adv_before + delta, -1.0, 1.0)
+
 
     with open("config.yaml", "r") as f:
         cfg = yaml.safe_load(f)
@@ -171,9 +168,9 @@ def main():
                                                                                             
     num_steps = cfg["attack"]["num_steps"]
     epsilon = eval(cfg["attack"]["epsilon"])
-    step_size = epsilon / 30
+    step_size = epsilon / 50
 
-                                         
+    random.seed(0)                                        
     run_attack(pipe, image, h, w, num_frames, prompt_emb_src, prompt_emb_tgt, image_emb_src, image_emb_tgt, latents_list,
                 num_steps=num_steps, epsilon=epsilon, step_size=step_size)
 

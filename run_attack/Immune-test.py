@@ -37,8 +37,7 @@ pipe = WanVideoPipeline.from_model_manager(model_manager, torch_dtype=torch.bflo
 h = 480
 w = 832
 
-# image = Image.open("attacked/images/dog.jpg")
-image = Image.open("attacked/images/car-turn.jpg")
+image = Image.open("attacked/images/train.jpg")
 
 image = image.resize((w, h))
 
@@ -46,16 +45,19 @@ image = image.resize((w, h))
 pipe = setup_pipe_modules(pipe)
 
 
+os.makedirs("attacked/videos", exist_ok=True)
+os.makedirs("attacked/frames", exist_ok=True)
+
 video = pipe(
-    prompt="The silver SUV navigates smoothly around the winding mountain road, its tires gripping the asphalt as it accelerates steadily. With each curve, the vehicle leans gently, showcasing its agility while the driver enjoys the stunning scenery around them.",
+    prompt="The blue train slowly pulls away from the station, wheels turning smoothly on the tracks as it gains momentum. It gradually accelerates, weaving through the miniature landscape, passing by tiny trees and figures at a steady pace.",
     input_image=image,
     num_inference_steps=25, height=h, width=w,
-    seed=0, tiled=False, num_frames=17, cfg_scale=1,
+    seed=0, tiled=False, num_frames=17, cfg_scale=5,
 )
-save_video(video, "attacked/videos/car-turn_5.mp4", fps=10, quality=5)
+save_video(video, "attacked/videos/train.mp4", fps=10, quality=5)
 
 
-out_dir = "attacked/frames/car-turn"
+out_dir = "attacked/frames/train"
 os.makedirs(out_dir, exist_ok=True)
 for i, frame in enumerate(video):
-    frame.save(os.path.join(out_dir, f"{i:04d}.png"))
+    frame.save(os.path.join(out_dir, f"{i:04d}.png"))                                                                                                                                                                                                                                                                             

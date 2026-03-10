@@ -13,8 +13,6 @@ import numpy as np
 from PIL import Image
 from tqdm import tqdm
 from typing import Optional
-import matplotlib.pyplot as plt
-from sklearn.decomposition import PCA
 
 from ..vram_management import enable_vram_management, AutoWrappedModule, AutoWrappedLinear
 from ..models.wan_video_text_encoder import T5RelativeEmbedding, T5LayerNorm
@@ -187,7 +185,6 @@ class WanVideoPipeline(BasePipeline):
         y = y.unsqueeze(0)
         clip_context = clip_context.to(dtype=self.torch_dtype, device=self.device)
         y = y.to(dtype=self.torch_dtype, device=self.device)
-
         return {"clip_feature": clip_context, "y": y}
 
 

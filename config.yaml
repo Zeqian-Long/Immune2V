@@ -1,14 +1,18 @@
 attack:
-  epsilon: 40/255*2
+  epsilon: 32/255*2
   num_steps: 500
+
 data:
-  image_path: data/images/car-turn.jpg
-  target_image_path: data/images/swing.jpg
+  image_path: data/images/train.jpg
+  target_image_path: data/images/blackswan.jpg
+
 prompt:
-  source: The silver SUV navigates smoothly around the winding mountain road, its tires gripping the asphalt as it accelerates steadily. With each curve, the vehicle leans gently, showcasing its agility while the driver enjoys the stunning scenery around them.
-  target: A massive dragon bursts from the mountain, flapping its enormous wings and soaring high into the sky. It breathes fire as it spirals downwards, creating a breathtaking but chaotic display of power and intensity.
+  source: The blue train slowly pulls away from the station, wheels turning smoothly on the tracks as it gains momentum. It gradually accelerates, weaving through the miniature landscape, passing by tiny trees and figures at a steady pace.
+  target: A giant firework erupts in the night sky, exploding with intense colors and bright sparks that shower down like rain. The chaos of the display sends shockwaves through the air, creating a moment of breathtaking turbulence and excitement.
+
 video:
   denoising_steps: 25
+  preprocess_cfg_scale: 5.0
   height: 480
   num_frames: 17
   width: 832
