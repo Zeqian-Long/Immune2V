@@ -68,3 +68,16 @@ To run the whole dataset, run
 chmod +x run_batch_attack.sh
 ./run_batch_attack.sh
 ```
+
+## Citation
+
+If you find this project useful in your research, please consider cite:
+
+```BibTeX
+@article{long2026immune2v,
+  title={Immune2V: Image Immunization Against Dual-Stream Image-to-Video Generation},
+  author={Long, Zeqian and Kara, Ozgur and Xue, Haotian and Chen, Yongxin and James M., Rehg},
+  year={2026}
+}
+
+```
