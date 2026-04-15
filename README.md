@@ -4,9 +4,20 @@
 
 [Zeqian Long](https://zeqian-long.github.io/)<sup>1*</sup>, [Ozgur Kara](https://karaozgur.com/)<sup>1*</sup>, [Haotian Xue](https://xavihart.github.io/)<sup>2*</sup>, [Yongxin Chen](https://yongxin.ae.gatech.edu/)<sup>2</sup>, [James M. Rehg](https://rehg.org/)<sup>1</sup>,
 
+<p><sup>*</sup> Equal contribution</p>
+
 <sup>1</sup> University of Illinois Urbana-Champaign,  <sup>2</sup> Georgia Institute of Technology
 
+
+
+<a href='https://immune2v.github.io/'><img src='https://img.shields.io/badge/Project-Page-Green'></a>
+[![arXiv](https://img.shields.io/badge/arXiv-2604.10837-b31b1b.svg)](https://arxiv.org/abs/2604.10837)
+[![Huggingface space](https://img.shields.io/badge/🤗-Huggingface%20Space-orange.svg)](https://github.com/Zeqian-Long/Immune2V) 
+[![GitHub Stars](https://img.shields.io/github/stars/Zeqian-Long/Immune2V)](https://github.com/Zeqian-Long/Immune2V)
+
 </div>
+
+
 
 
 <p>
@@ -20,7 +31,7 @@ We propose <b>Immune2V</b>, an image immunization framework designed to prevent 
 
 # 🔥 News
 
-- [2026.3.9] Paper will be released soon!
+- [2026.4.15] Paper released!
 
 
 # 🛠️ Code Setup
