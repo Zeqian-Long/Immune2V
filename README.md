@@ -2,7 +2,7 @@
   
 # 💉 Immune2V: Image Immunization Against Dual-Stream Image-to-Video Generation
 
-[Zeqian Long](https://zeqian-long.github.io/)<sup>1*</sup>, [Ozgur Kara](https://karaozgur.com/)<sup>1*</sup>, [Haotian Xue](https://xavihart.github.io/)<sup>2*</sup>, [Yongxin Chen](https://yongxin.ae.gatech.edu/)<sup>2</sup>, [James M. Rehg](https://rehg.org/)<sup>1</sup>,
+[Zeqian Long](https://zeqian-long.github.io/)<sup>1*</sup>, [Ozgur Kara](https://karaozgur.com/)<sup>1*</sup>, [Haotian Xue](https://xavihart.github.io/)<sup>2*</sup>, [Yongxin Chen](https://yongxin.ae.gatech.edu/)<sup>2</sup>, [James M. Rehg](https://rehg.org/)<sup>1</sup>
 
 <p><sup>*</sup> Equal contribution</p>
 
@@ -78,4 +78,17 @@ To run the whole dataset, run
 ```
 chmod +x run_batch_attack.sh
 ./run_batch_attack.sh
+```
+
+## Citation
+
+If you find this project useful in your research, please consider cite:
+
+```BibTeX
+@article{long2026immune2v,
+  title={Immune2V: Image Immunization Against Dual-Stream Image-to-Video Generation},
+  author={Long, Zeqian and Kara, Ozgur and Xue, Haotian and Chen, Yongxin and James M., Rehg},
+  year={2026}
+}
+
 ```
